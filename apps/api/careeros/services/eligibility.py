@@ -3,7 +3,12 @@
 import re
 from datetime import datetime
 
-from careeros.db import utcnow
+from careeros.db import utc_naive, utcnow
+
+
+def unconfirmed(provenance, field):
+    info = provenance.get(field, {})
+    return info.get("method") in ("rules", "ai") and not info.get("confirmed", False)
 
 
 def normalized(value):
@@ -23,18 +28,18 @@ def normalized(value):
 
 
 def evaluate(profile: dict, job: dict, now: datetime | None = None):
-    now = now or utcnow()
+    now = utc_naive(now) if now else utcnow()
     r = job.get("requirements", {})
     provenance = job.get("provenance", {})
     failures, reviews, passes = [], [], []
     for key in ("application_deadline", "expires_at"):
         value = job.get(key)
-        if isinstance(value, str):
-            from datetime import UTC
-
-            value = datetime.fromisoformat(value.replace("Z", "+00:00"))
-            if value.tzinfo:
-                value = value.astimezone(UTC).replace(tzinfo=None)
+        value = utc_naive(value)
+        if value and unconfirmed(provenance, key):
+            reviews.append(
+                f"Verify extracted {key.replace('_', ' ')} before treating this role as open or closed"
+            )
+            continue
         if value and value <= now:
             return {
                 "state": "CLOSED",
@@ -49,8 +54,7 @@ def evaluate(profile: dict, job: dict, now: datetime | None = None):
         }
 
     def check(field, passed, message, known=True):
-        info = provenance.get(field, {})
-        uncertain = info.get("method") in ("rules", "ai") and not info.get("confirmed", False)
+        uncertain = unconfirmed(provenance, field)
         if uncertain:
             reviews.append(f"Verify extracted requirement: {message}")
         elif not known:
@@ -139,6 +143,8 @@ def evaluate(profile: dict, job: dict, now: datetime | None = None):
             )
     if r.get("language_requirement"):
         reviews.append(f"Confirm language requirement: {r['language_requirement']}")
+    if r.get("graduate_eligibility"):
+        reviews.append(f"Confirm graduate eligibility: {r['graduate_eligibility']}")
     if failures:
         state, reasons = "NOT_ELIGIBLE", failures + reviews
     elif reviews:

@@ -26,6 +26,8 @@ flowchart TD
 - `services/sources.py`: shared adapter contract and bounded public HTTP access.
 - `services/ingestion.py`: transactions/savepoints, failure isolation and source-run evidence.
 - `services/notifications.py`: records first; delivery second; email optional.
+- `services/outbound.py`: bounded provider POST retries; ambiguous transport/5xx failures retry only with an idempotency key.
+- `middleware.py` and `logging_config.py`: bounded request streams and shared API/worker JSON logs.
 - `apps/worker/worker/__main__.py`: schedules call the same services instead of duplicating logic.
 
 ## Request example
@@ -36,11 +38,11 @@ A job-detail request authenticates a hashed access token, checks `job.user_id`, 
 
 Identity/ownership/join-heavy relationships are relational. Variable source requirements, extraction evidence, preferences and low-volume notes use validated JSON. Project technologies and verified skills are small JSON lists; they are not globally normalized joins in V1. Eligibility is included in `job_matches.data` rather than duplicated in a separate table. Market and visa records include country names; a separate country catalogue is unnecessary until country metadata becomes a maintained dataset.
 
-Synchronous SQLAlchemy keeps transaction lifetimes explicit and easy to debug. FastAPI sync endpoints run in its threadpool; source network requests are async. Manual ingestion is bounded but can outlast a serverless gateway timeout for unusually large boards. Use the cron worker for large sources. No queue is needed initially; a future queue can call `ingest_source` without changing matching.
+Synchronous SQLAlchemy keeps transaction lifetimes explicit and easy to debug. FastAPI sync endpoints run in its threadpool; source network requests are async. The ingestion route runs in the threadpool and creates its asynchronous fetch loop there, keeping synchronous database work off the main event loop. Manual ingestion is bounded but can outlast a serverless gateway timeout for unusually large boards. Use the cron worker for large sources. No queue is needed initially; a future queue can call `ingest_source` without changing matching.
 
 ## Consistency
 
-A per-user ingest lock protects cross-source deduplication and a unique canonical key guards collisions. Upserts are single-transaction, malformed records roll back to a savepoint, and each source commits its own run. Refresh and status updates use database row locks where supported. Notifications have both unique keys and locking. Application events have append-only database triggers. Tests use disposable databases.
+A per-user writer lock shared by ingestion and manual job/source mutation protects cross-source deduplication and a unique canonical key guards collisions. Upserts are single-transaction, malformed records roll back to a savepoint, and each source commits its own run. Refresh and status updates use database row locks where supported. Notifications have both unique keys and locking. Application events have append-only database triggers. Shared company/skill inserts use database conflict handling across users. `run-cycle` isolates each scheduled stage and reports aggregate failures. Tests use disposable databases.
 
 ## Scaling boundary
 

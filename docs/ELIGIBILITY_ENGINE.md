@@ -6,7 +6,7 @@ Evaluation precedes recommendation ranking. Hard facts come from the validated p
 
 | State | Meaning |
 |---|---|
-| CLOSED | Inactive, deadline passed or explicit expiry passed |
+| CLOSED | Inactive, confirmed deadline passed or confirmed explicit expiry passed |
 | NOT_ELIGIBLE | At least one confirmed hard requirement fails |
 | REVIEW_REQUIRED | Profile facts missing, extracted hard facts unconfirmed, language unresolved, or work authorization uncertain |
 | LIKELY_ELIGIBLE | No conflicting rule found, but no published structured hard checks to confirm |
@@ -16,7 +16,7 @@ Order: closure → graduation → CGPA → degree/branch → experience range �
 
 Examples for the seed profile: minimum CGPA 8.0 fails against 7.38; 7.38 passes exactly; allowed graduation [2027] fails 2028; an explicit Netherlands work-authorization requirement fails when only India is recorded. Sponsorship availability does not magically satisfy a requirement for existing authorization.
 
-`provenance[field] = {method, confidence, source_text, confirmed}` distinguishes rule/AI extraction from confirmed facts. Unconfirmed extracted hard requirements request review even with a high confidence score. Campus save asks the user to verify and marks reviewed fields manual/confirmed. Imported requirements retain uncertainty.
+`provenance[field] = {method, confidence, source_text, confirmed}` distinguishes rule/AI extraction from confirmed facts. Unconfirmed extracted hard requirements request review even with a high confidence score. Campus save asks the user to verify and marks reviewed fields manual/confirmed. Imported requirements retain uncertainty. The same rule applies to extracted deadlines and expiry dates: unconfirmed dates create a review item, even when in the past. Expiry workers and deadline alerts skip uncertain dates until human confirmation. Free-text graduate eligibility without structured years also requests review.
 
 The local CGPA profile uses a 0–10 scale. The parser is intentionally conservative and requires review; do not compare a foreign 4-point GPA directly. Review degree synonyms that are not in the small explicit normalization map. Country notes are not legal determinations.
 

@@ -1,5 +1,10 @@
 node_modules
 .next
+.next-*
 .env*
 playwright-report
 test-results
+
+**/.env*
+!**/.env.example
+*.db-*

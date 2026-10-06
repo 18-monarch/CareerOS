@@ -59,7 +59,7 @@ def add_skill(body: SkillIn, user: User = Depends(current_user), db: Session = D
     if not row:
         row = UserSkill(user_id=user.id, skill_id=skill.id)
         db.add(row)
-    row.data = body.model_dump(exclude={"name", "category"})
+    row.data = body.model_dump(exclude={"name"})
     db.commit()
     return {"id": row.id, **body.model_dump()}
 
@@ -149,6 +149,7 @@ def resumes(user: User = Depends(current_user), db: Session = Depends(get_db)):
 
 @router.post("/resumes", status_code=201)
 def add_resume(body: ResumeIn, user: User = Depends(current_user), db: Session = Depends(get_db)):
+    db.scalar(select(User).where(User.id == user.id).with_for_update())
     if body.is_master:
         for row in db.scalars(select(ResumeVersion).where(ResumeVersion.user_id == user.id)):
             row.data = {**row.data, "is_master": False}
@@ -158,8 +159,32 @@ def add_resume(body: ResumeIn, user: User = Depends(current_user), db: Session =
     return {"id": row.id, "name": row.name, **row.data}
 
 
+@router.put("/resumes/{id}")
+def edit_resume(
+    id: str, body: ResumeIn, user: User = Depends(current_user), db: Session = Depends(get_db)
+):
+    db.scalar(select(User).where(User.id == user.id).with_for_update())
+    row = owned(db, ResumeVersion, id, user)
+    if body.is_master:
+        for other in db.scalars(select(ResumeVersion).where(ResumeVersion.user_id == user.id)):
+            other.data = {**other.data, "is_master": False}
+    row.name, row.data = body.name, body.model_dump(exclude={"name"})
+    db.commit()
+    return {"id": row.id, "name": row.name, **row.data}
+
+
 @router.delete("/resumes/{id}")
 def delete_resume(id: str, user: User = Depends(current_user), db: Session = Depends(get_db)):
+    from careeros.models import Application
+
+    for application in db.scalars(
+        select(Application).where(Application.user_id == user.id)
+    ).unique():
+        if application.data.get("resume_id") == id:
+            raise HTTPException(
+                409,
+                "This resume is linked to an application. Keep it for your records, or unlink it first.",
+            )
     db.delete(owned(db, ResumeVersion, id, user))
     db.commit()
     return {"ok": True}

@@ -71,7 +71,10 @@ export default function JobForm({
               ...((initial?.provenance as Record<string, unknown>) || {}),
             };
             if (f.get("confirmed"))
-              for (const k of Object.keys(JSON.parse(requirements)))
+              for (const k of [
+                ...Object.keys(JSON.parse(requirements)),
+                "application_deadline",
+              ])
                 provenance[k] = {
                   ...((provenance[k] as object) || {}),
                   method: "manual",

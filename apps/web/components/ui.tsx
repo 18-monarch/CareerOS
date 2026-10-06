@@ -134,15 +134,21 @@ export function Modal({
   onClose: () => void;
 }) {
   const ref = useRef<HTMLDialogElement>(null);
+  const titleId = useId();
   useEffect(() => {
     const d = ref.current;
     d?.showModal();
     return () => d?.close();
   }, []);
   return (
-    <dialog ref={ref} onCancel={onClose} className="modal">
+    <dialog
+      ref={ref}
+      onCancel={onClose}
+      className="modal"
+      aria-labelledby={titleId}
+    >
       <div className="modal-title">
-        <h2>{title}</h2>
+        <h2 id={titleId}>{title}</h2>
         <button
           className="icon-button"
           onClick={onClose}

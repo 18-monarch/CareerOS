@@ -25,6 +25,7 @@ export interface Job {
   application_deadline: string | null;
   is_demo: boolean;
   is_active: boolean;
+  manually_archived?: boolean;
   required_skills: string[];
   preferred_skills: string[];
   requirements: Record<string, unknown>;
@@ -37,6 +38,8 @@ export interface Job {
     source_url: string;
     external_id: string;
     last_seen_at: string;
+    is_active: boolean;
+    missing_runs: number;
   }[];
 }
 export interface Preferences {
@@ -145,7 +148,13 @@ export interface Source {
   kind: string;
   enabled: boolean;
   status: string;
-  config: Record<string, string>;
+  config: {
+    board?: string;
+    company_name?: string;
+    country?: string;
+    feed_url?: string | null;
+    close_missing_after?: number;
+  };
   last_success: string | null;
   last_failure: string | null;
   average_runtime_ms: number | null;
@@ -153,6 +162,7 @@ export interface Source {
     fetched: number;
     added: number;
     updated: number;
+    closed: number;
     parse_errors: number;
     error: string | null;
     created_at: string;

@@ -10,6 +10,12 @@ def utcnow():
     return datetime.now(UTC).replace(tzinfo=None)
 
 
+def utc_naive(value):
+    if isinstance(value, str):
+        value = datetime.fromisoformat(value.replace("Z", "+00:00"))
+    return value.astimezone(UTC).replace(tzinfo=None) if value and value.tzinfo else value
+
+
 class Base(DeclarativeBase):
     pass
 

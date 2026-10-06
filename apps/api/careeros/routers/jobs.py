@@ -1,14 +1,15 @@
-from datetime import datetime
+from datetime import UTC, datetime
 
 from careeros.db import get_db
 from careeros.models import Application, Job, Occurrence, User
 from careeros.routers.profile import owned
 from careeros.schemas import JobIn, NoticeIn
-from careeros.security import current_user
+from careeros.security import current_user, job_writer, rate_limit
 from careeros.services.ai import provider
 from careeros.services.matching import match, skill_key
 from careeros.services.repository import (
     candidate_context,
+    company_record,
     manual_source,
     ranked_jobs,
     serialize_job,
@@ -99,7 +100,12 @@ def jobs(
             continue
         if deadline_before and (
             not j["application_deadline"]
-            or j["application_deadline"] > deadline_before.replace(tzinfo=None)
+            or j["application_deadline"]
+            > (
+                deadline_before.astimezone(UTC).replace(tzinfo=None)
+                if deadline_before.tzinfo
+                else deadline_before
+            )
         ):
             continue
         result.append(j)
@@ -117,7 +123,7 @@ def jobs(
 
 
 @router.post("/jobs", status_code=201)
-def add_job(body: JobIn, user: User = Depends(current_user), db: Session = Depends(get_db)):
+def add_job(body: JobIn, user: User = Depends(job_writer), db: Session = Depends(get_db)):
     if body.source not in ("manual", "campus"):
         raise HTTPException(422, "Use manual or campus for user-created jobs")
     source = manual_source(db, user.id, body.source)
@@ -138,6 +144,8 @@ def job_detail(id: str, user: User = Depends(current_user), db: Session = Depend
             "source_url": o.source_url,
             "first_seen_at": o.created_at,
             "last_seen_at": o.last_seen_at,
+            "is_active": o.is_active,
+            "missing_runs": o.missing_runs,
         }
         for o in db.scalars(select(Occurrence).where(Occurrence.job_id == id))
     ]
@@ -159,20 +167,33 @@ def job_match(id: str, user: User = Depends(current_user), db: Session = Depends
 
 
 @router.patch("/jobs/{id}/archive")
-def archive(id: str, user: User = Depends(current_user), db: Session = Depends(get_db)):
+def archive(id: str, user: User = Depends(job_writer), db: Session = Depends(get_db)):
     j = owned(db, Job, id, user)
     j.is_active = False
+    j.data = {**j.data, "manually_archived": True}
+    db.commit()
+    return {"ok": True}
+
+
+@router.patch("/jobs/{id}/restore")
+def restore(id: str, user: User = Depends(job_writer), db: Session = Depends(get_db)):
+    j = owned(db, Job, id, user)
+    j.is_active = True
+    j.data = {**j.data, "manually_archived": False, "source_closed": False}
     db.commit()
     return {"ok": True}
 
 
 @router.post("/campus/parse")
-async def campus_parse(body: NoticeIn, user: User = Depends(current_user)):
+async def campus_parse(
+    body: NoticeIn, user: User = Depends(current_user), db: Session = Depends(get_db)
+):
+    rate_limit(db, f"campus-parse:{user.id}", 20, 3600)
     return await provider().parse_job_description(body.text)
 
 
 @router.post("/campus/jobs", status_code=201)
-def campus_add(body: JobIn, user: User = Depends(current_user), db: Session = Depends(get_db)):
+def campus_add(body: JobIn, user: User = Depends(job_writer), db: Session = Depends(get_db)):
     body.source = "campus"
     return add_job(body, user, db)
 
@@ -183,31 +204,21 @@ def campus_list(user: User = Depends(current_user), db: Session = Depends(get_db
 
 
 @router.put("/jobs/{id}")
-def edit_job(
-    id: str, body: JobIn, user: User = Depends(current_user), db: Session = Depends(get_db)
-):
+def edit_job(id: str, body: JobIn, user: User = Depends(job_writer), db: Session = Depends(get_db)):
     """Human correction retains original source occurrence payloads for audit."""
-    from careeros.models import AuditLog, Company, JobSkill
-    from careeros.services.repository import identity, normalized_text, skill_record
+    from careeros.models import AuditLog, JobSkill
+    from careeros.services.repository import identity, skill_record
 
     job = owned(db, Job, id, user)
-    new_key = identity(body.model_dump(mode="json"))
+    new_key = identity(
+        {**body.model_dump(mode="json"), "requisition_id": job.data.get("requisition_id")}
+    )
     conflict = db.scalar(
         select(Job).where(Job.user_id == user.id, Job.canonical_key == new_key, Job.id != id)
     )
     if conflict:
         raise HTTPException(409, "Another canonical job already has this identity")
-    company = db.scalar(
-        select(Company).where(Company.normalized_name == normalized_text(body.company_name))
-    )
-    if not company:
-        company = Company(
-            name=body.company_name,
-            normalized_name=normalized_text(body.company_name),
-            domain=body.company_domain,
-        )
-        db.add(company)
-        db.flush()
+    company = company_record(db, body.company_name, body.company_domain)
     job.company_id, job.canonical_key = company.id, new_key
     for key in [
         "title",

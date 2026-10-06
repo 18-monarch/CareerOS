@@ -2,7 +2,7 @@ from argon2.exceptions import InvalidHashError, VerificationError
 from careeros.config import get_settings
 from careeros.db import get_db, utcnow
 from careeros.models import AuditLog, AuthSession, Preferences, Profile, User
-from careeros.schemas import Credentials, PreferenceIn
+from careeros.schemas import Credentials, PasswordChange, PreferenceIn
 from careeros.security import (
     DUMMY_HASH,
     current_user,
@@ -88,6 +88,30 @@ def refresh(request: Request, response: Response, db: Session = Depends(get_db))
 @router.get("/me")
 def me(user: User = Depends(current_user)):
     return {"id": user.id, "name": user.name, "email": user.email}
+
+
+@router.post("/password")
+def change_password(
+    body: PasswordChange,
+    response: Response,
+    user: User = Depends(current_user),
+    db: Session = Depends(get_db),
+):
+    rate_limit(db, f"password:{user.id}", 5, 900)
+    user = db.scalar(
+        select(User)
+        .where(User.id == user.id)
+        .with_for_update()
+        .execution_options(populate_existing=True)
+    )
+    try:
+        hasher.verify(user.password_hash, body.current_password)
+    except (VerificationError, InvalidHashError) as exc:
+        raise HTTPException(400, "Current password is incorrect") from exc
+    user.password_hash = hasher.hash(body.new_password)
+    db.execute(delete(AuthSession).where(AuthSession.user_id == user.id))
+    db.add(AuditLog(user_id=user.id, action="password.changed"))
+    return {"ok": True, **set_tokens(db, response, user.id)}
 
 
 @router.post("/logout")

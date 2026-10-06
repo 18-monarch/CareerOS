@@ -1,5 +1,3 @@
-import json
-import logging
 import time
 import uuid
 
@@ -12,41 +10,11 @@ from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 
 from careeros.config import get_settings
 from careeros.db import engine
+from careeros.logging_config import configure_logging
+from careeros.middleware import RequestSizeLimit
 from careeros.routers import applications, auth, insights, jobs, profile, sources
 
-
-class JSONFormatter(logging.Formatter):
-    def format(self, record):
-        data = {
-            "time": self.formatTime(record),
-            "level": record.levelname,
-            "message": record.getMessage(),
-            "logger": record.name,
-        }
-        for key in (
-            "request_id",
-            "method",
-            "path",
-            "status",
-            "duration_ms",
-            "source_id",
-            "error_type",
-            "added",
-            "parse_errors",
-            "host",
-            "attempt",
-        ):
-            if hasattr(record, key):
-                data[key] = getattr(record, key)
-        return json.dumps(data)
-
-
-handler = logging.StreamHandler()
-handler.setFormatter(JSONFormatter())
-logger = logging.getLogger("careeros")
-logger.handlers = [handler]
-logger.setLevel(logging.INFO)
-logger.propagate = False
+logger = configure_logging()
 
 app = FastAPI(
     title="CareerOS API",
@@ -62,17 +30,15 @@ app.add_middleware(
 )
 
 
+app.add_middleware(RequestSizeLimit)
+
+
 @app.middleware("http")
 async def observation(request: Request, call_next):
     request_id = str(uuid.uuid4())
     request.state.request_id = request_id
     started = time.monotonic()
-    if int(request.headers.get("content-length", "0") or 0) > 1024 * 1024:
-        response = JSONResponse(
-            {"error": {"message": "Request too large", "request_id": request_id}}, status_code=413
-        )
-    else:
-        response = await call_next(request)
+    response = await call_next(request)
     response.headers.update(
         {
             "X-Request-ID": request_id,
@@ -170,6 +136,15 @@ def ready():
         with engine.connect() as connection:
             revision = connection.scalar(text("SELECT version_num FROM alembic_version"))
             connection.execute(text("SELECT 1 FROM users LIMIT 1"))
+        if revision != "c61f03":
+            return JSONResponse(
+                {
+                    "status": "not_ready",
+                    "reason": "database_migration_required",
+                    "schema_revision": revision,
+                },
+                status_code=503,
+            )
         return {"status": "ready", "schema_revision": revision}
     except SQLAlchemyError:
         return JSONResponse({"status": "not_ready"}, status_code=503)

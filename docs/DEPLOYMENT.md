@@ -11,7 +11,7 @@ git remote add origin https://github.com/YOUR_ACCOUNT/CareerOS.git
 git push -u origin main
 ```
 
-Preserve the included Git history. Do not upload `.env`, databases, virtual environments or `node_modules`. The zip excludes these. Configure repository branch protection to require both CI jobs after they have run once.
+Preserve the included Git history. Do not upload `.env`, databases, virtual environments or `node_modules`. The zip excludes these. Configure repository branch protection to require all three CI jobs after they have run once.
 
 ## 2. Neon
 
@@ -28,7 +28,7 @@ Supply the `careeros-production` environment group values:
 - `DATABASE_URL`: direct Neon URL with `sslmode=require`.
 - `FRONTEND_ORIGIN`: exact final Vercel/custom-domain HTTPS origin, no trailing slash.
 - `COOKIE_SECURE=true`, `ENVIRONMENT=production`.
-- `REGISTRATION_ENABLED=false` by default; temporarily enable only to create your personal account, then disable it.
+- `REGISTRATION_ENABLED=false` by default; use the operator CLI below to create your personal account.
 
 Build: `pip install -r requirements.lock && pip install --no-deps .`
 
@@ -59,8 +59,11 @@ Preview domains are intentionally not wildcard-trusted. Use a separate staging b
 
 Choose one path:
 
-- Enable registration briefly, create an account in the UI, disable registration, and enter your real profile.
+- Recommended: run `python -m careeros.manage create-user --email your@email.example --name "Your name"` in the backend shell. Enter a password at the hidden prompt. This creates an empty account while registration stays closed.
+- Alternatively enable registration briefly, create an account in the UI, then disable registration.
 - For a private demo only: run `DEMO_PASSWORD='unique-password' python -m careeros.seed --email your@email.example` in the backend shell. This adds eight synthetic postings and editable self-assessments. Never use the test password from CI for a hosted account.
+
+For trusted-operator recovery, run `python -m careeros.manage reset-password --email your@email.example`. The CLI prompts securely, revokes sessions and writes an audit record. Users can also change their password in My profile with their current password.
 
 No default admin password is installed. Users can manage only their own sources; there is no cross-user public admin dashboard.
 
@@ -70,7 +73,7 @@ All schedules in `render.yaml` use UTC:
 
 | Service | Schedule | India time | Commands |
 |---|---|---|---|
-| Ingestion | `15 */6 * * *` | 05:45, 11:45, 17:45, 23:45 IST | ingest, recalculate, expire |
+| Ingestion | `15 */6 * * *` | 05:45, 11:45, 17:45, 23:45 IST | `run-cycle`: ingest, recalculate, expire, deadline alerts |
 | Daily | `30 2 * * *` | 08:00 IST | deadline alerts, digest |
 | Weekly | `30 2 * * 1` | Monday 08:00 IST | weekly summary |
 
@@ -101,4 +104,4 @@ Official feeds: set `ALLOWED_FEED_HOSTS` to trusted domains. This is a permissio
 
 JSON logs contain request IDs, route, status, latency, source ID and error class. They omit bodies, credentials and tokens. Record run counts via source health. Monitor `/ready` externally. Keep logs/retention appropriate for a personal app.
 
-Rollback frontend/backend code via platform deployments only after checking database compatibility. Database migrations are a separate concern. Take a Neon backup/branch before destructive changes. The current first two migrations are additive except for explicit downgrade paths.
+Rollback frontend/backend code via platform deployments only after checking database compatibility. Database migrations are a separate concern. Take a Neon backup/branch before destructive changes. The three migrations (current head `c61f03`) add tables, immutable-history triggers and source-reconciliation columns; review their explicit downgrade paths. `/ready` requires the exact head shipped with the API. Update that expected revision alongside future migrations.

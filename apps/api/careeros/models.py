@@ -181,6 +181,8 @@ class Occurrence(Entity, Base):
     source_url: Mapped[str | None] = mapped_column(Text)
     raw_payload: Mapped[dict] = mapped_column(JSON, default=dict)
     last_seen_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True, server_default="true")
+    missing_runs: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
 
 
 class MatchResult(Entity, Base):
@@ -255,6 +257,7 @@ class SourceRun(Entity, Base):
     fetched: Mapped[int] = mapped_column(Integer, default=0)
     added: Mapped[int] = mapped_column(Integer, default=0)
     updated: Mapped[int] = mapped_column(Integer, default=0)
+    closed: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
     parse_errors: Mapped[int] = mapped_column(Integer, default=0)
     runtime_ms: Mapped[int] = mapped_column(Integer, default=0)
     error: Mapped[str | None] = mapped_column(String(200))

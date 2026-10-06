@@ -6,7 +6,7 @@ from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator, mo
 
 
 class Schema(BaseModel):
-    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
+    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True, allow_inf_nan=False)
 
 
 def safe_url(value):
@@ -19,9 +19,23 @@ def safe_url(value):
 
 
 class Credentials(Schema):
+    model_config = ConfigDict(extra="forbid", str_strip_whitespace=False)
     email: EmailStr
     password: str = Field(min_length=12, max_length=128)
     name: str = Field(default="CareerOS user", min_length=1, max_length=120)
+
+    @field_validator("name")
+    @classmethod
+    def clean_name(cls, value):
+        if not value.strip():
+            raise ValueError("Name must not be blank")
+        return value.strip()
+
+
+class PasswordChange(Schema):
+    model_config = ConfigDict(extra="forbid", str_strip_whitespace=False)
+    current_password: str = Field(min_length=1, max_length=128)
+    new_password: str = Field(min_length=12, max_length=128)
 
 
 DEFAULT_WEIGHTS = {
@@ -236,7 +250,18 @@ class SourceIn(Schema):
     company_name: str = Field(default="", max_length=160)
     country: str = Field(default="Unknown", max_length=80)
     enabled: bool = True
+    close_missing_after: int = Field(default=0, ge=0, le=10)
     _url = field_validator("feed_url")(safe_url)
+
+    @model_validator(mode="after")
+    def valid_source(self):
+        if self.kind in ("greenhouse", "lever", "ashby") and not self.board:
+            raise ValueError("Board token required")
+        if self.kind == "official" and not self.feed_url:
+            raise ValueError("Approved feed URL required")
+        if self.close_missing_after == 1:
+            raise ValueError("Use at least two complete missing snapshots, or 0 to disable")
+        return self
 
 
 class NoticeIn(Schema):

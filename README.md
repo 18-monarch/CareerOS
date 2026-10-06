@@ -7,15 +7,15 @@ CareerOS is a private workspace for deciding what to apply to, checking hard eli
 ## Implemented in V1
 
 - Email/password login, Argon2id hashing, 15-minute opaque access tokens, rotating 7-day sessions, HttpOnly cookies, CSRF checks, persistent rate limits and user ownership checks.
-- Editable education, preferences, skills/evidence, project mastery, external links and resume metadata.
+- Editable education, preferences, skills/evidence, project mastery, external links and resume metadata; password changes with session revocation and an operator account-management CLI.
 - Public Greenhouse, Lever and Ashby adapters, operator-approved official JSON feeds, manual entry and campus notice parsing/review.
-- Canonical deduplication with source occurrences and raw payloads, source health, independent record failure handling and retry/backoff.
+- Canonical deduplication with source occurrences and raw payloads, editable source configuration, opt-in missing-posting reconciliation, source health, independent record failure handling and retry/backoff.
 - Five-state deterministic eligibility, explainable eight-factor matching and market-weighted skill-gap recommendations.
 - Search/filtering, save/apply tracking, append-only event history, deadlines, OA/interview dates and conservative funnel analytics.
 - In-app high-match alerts, deadline reminders, daily digests and weekly summaries; optional Resend delivery.
 - DSA practice logging, editable learning progress, sourced monthly market notes and international-rule notes with stale warnings.
 - Responsive dark/light UI, keyboard-accessible forms/dialogs, loading/empty/error states.
-- Seven worker commands, Alembic migrations, Docker configuration, GitHub Actions and Render Blueprint.
+- Seven individual worker commands plus a resilient `run-cycle`, Alembic migrations, Docker configuration, GitHub Actions and Render Blueprint.
 
 **Read [VERIFICATION.md](docs/VERIFICATION.md) for exactly what was run and the limits of that evidence.** This repository is configured for deployment; it has not been deployed to a cloud account.
 
@@ -66,7 +66,15 @@ cd ../..
 
 Without Docker, change root `.env` to `DATABASE_URL=sqlite:///./careeros.db` before migrating. Never use SQLite for multi-instance production deployments.
 
-To seed the demo, choose your own password. The command does not overwrite an existing account.
+Create an empty personal account without enabling public registration (password entered securely at the prompt):
+
+```bash
+.venv/bin/python -m careeros.manage create-user --email your@email.example --name 'Your name'
+```
+
+For operator-assisted recovery, use `python -m careeros.manage reset-password --email your@email.example`; it revokes existing sessions and records an audit event. Signed-in users can change their password in **My profile**.
+
+To seed the demo instead, choose your own password. The command does not overwrite an existing account.
 
 ```bash
 export DEMO_PASSWORD='replace-with-your-own-long-password'
@@ -128,9 +136,10 @@ Without email credentials, alerts remain in-app. Without AI credentials, extract
 .venv/bin/python -m worker send-daily-digest
 .venv/bin/python -m worker send-deadline-alerts
 .venv/bin/python -m worker weekly-summary
+.venv/bin/python -m worker run-cycle
 ```
 
-Workers use session advisory locks on PostgreSQL and process locks for local SQLite. Ingestion locks are shared across worker and manual runs per user. Alerts use per-user locks and unique dedupe keys. A failed source is recorded and other sources continue. The CLI exits nonzero after an ingestion run if any source failed, so monitoring can detect partial failure.
+Workers use session advisory locks on PostgreSQL and process locks for local SQLite. Ingestion locks are shared across worker and manual runs per user. Alerts use per-user locks and unique dedupe keys. A failed source is recorded and other sources continue. The CLI exits nonzero for failed/degraded ingestion. `run-cycle` attempts ingestion, matching, expiry and deadline alerts even if an earlier stage fails, then reports aggregate errors. Weekly summaries cover the preceding seven days; digests include upcoming deadlines and recorded actions.
 
 ## Testing
 
@@ -144,8 +153,9 @@ npm run typecheck
 npm run test
 npm run build
 npx playwright install chromium
-# With backend/frontend running and the demo account seeded:
-DEMO_PASSWORD='your-demo-password' npm run test:e2e
+# Start real servers against an isolated migrated/seeded database:
+cd ../..
+scripts/verify-browser.sh
 ```
 
 Only set `TEST_DATABASE_URL` to a **disposable** database: integration fixtures create and drop all application tables. Native PostgreSQL tests and browser E2E are configured in CI. See [TESTING.md](docs/TESTING.md).
@@ -160,7 +170,7 @@ See [DEPLOYMENT.md](docs/DEPLOYMENT.md) for Neon → Render → Vercel setup, cr
 - Source-board country is configured, not inferred with certainty. Use Unknown for mixed boards; manual review is required for visa, ambiguous degree and language rules.
 - The conservative parser does not understand every notice format. Preferred/required skill inference from prose remains heuristic. Review extraction evidence; use manual entry if needed.
 - No resume upload or resume-content analysis; metadata only. No automatic LinkedIn/LeetCode/email/Drive sync and no automatic job applications.
-- Source refresh does not automatically close postings absent from a feed. Deadlines/expiry/source-provided active flags close jobs; otherwise archive manually to avoid false closure after partial outages.
+- Source closure is opt-in: choose 2–10 consecutive complete, nonempty, error-free snapshots before marking an occurrence missing. A canonical job closes only after every occurrence is inactive. Empty/failed/partial feeds do not trigger closure. Manual archive survives refresh and can be explicitly restored.
 - Ranking and filtering load a user's postings into memory before sorting/pagination. Suitable for hundreds to low thousands, not millions. Persisted match snapshots are available for future database-side search; UI recomputes for correctness after edits.
 - Score weights, learning-hour estimates and funnel thresholds are transparent heuristics, not validated hiring predictions.
 - Visa notes and market reports are manual, sourced notes. There is no automated legal interpretation or salary intelligence feed.
@@ -168,7 +178,7 @@ See [DEPLOYMENT.md](docs/DEPLOYMENT.md) for Neon → Render → Vercel setup, cr
 - Email delivery is retryable with a provider idempotency key; rare duplicates are possible if a provider succeeds but its response is lost beyond its idempotency retention window.
 - Hosted deployment, real email delivery and configured LLM calls require your credentials and separate smoke testing.
 
-Next improvements: verified-account recovery; source configuration editing and richer job revision history; robust date/skill extraction review; source-specific closure reconciliation; generated TypeScript types from OpenAPI; moving filtered candidate selection into SQL when job volume warrants it.
+Next improvements: verified-account recovery; richer job revision history; broader date/skill extraction coverage; generated TypeScript types from OpenAPI; moving filtered candidate selection into SQL when job volume warrants it.
 
 ## Study this code
 

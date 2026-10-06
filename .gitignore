@@ -17,5 +17,4 @@ playwright-report/
 test-results/
 *.tsbuildinfo
 
-.next-verification/
-.next-release/
+.next-*/

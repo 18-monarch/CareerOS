@@ -35,7 +35,7 @@ services:
     region: singapore
     schedule: "15 */6 * * *"
     buildCommand: pip install -r requirements.lock && pip install --no-deps .
-    startCommand: python -m worker ingest-jobs && python -m worker calculate-matches && python -m worker expire-jobs
+    startCommand: python -m worker run-cycle
     envVars:
       - fromGroup: careeros-production
   - type: cron

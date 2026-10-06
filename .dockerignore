@@ -4,6 +4,13 @@
 *.db
 **/node_modules
 **/.next
+**/.next-*
+**/.env.local
+**/.env.production
 **/__pycache__
 **/test-results
 **/playwright-report
+
+**/.env*
+!**/.env.example
+*.db-*

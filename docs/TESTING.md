@@ -4,34 +4,47 @@ Tests assert domain behavior and cross-layer workflows, not only implementation 
 
 ## Backend
 
-`pytest -q` uses temporary SQLite databases by default. `TEST_DATABASE_URL` switches fixtures to a disposable PostgreSQL database; tests create/drop tables, so **never point it at production**.
+`pytest -q` uses temporary SQLite databases by default. `TEST_DATABASE_URL` switches fixtures to disposable PostgreSQL. Tests create/drop all application tables: **never point it at production**.
 
-- `test_domain.py`: CGPA/graduation/degree/experience/authorization boundaries, closure at exact deadline, unknown facts, unconfirmed extraction, preferred skills, ranking suppression, evidence honesty, learning demand, parser provenance, URL validation.
-- `test_api.py`: registration/login, CSRF, origin rejection, refresh rotation, logout, rate limits, cross-tenant isolation, profile edit, all application milestones, funnel metrics, persistent records, duplicate notifications, manual/campus entries, job correction and supporting modules.
-- `test_sources.py`: vendor normalization fixtures, transient HTTP retry behavior, ingestion savepoints, source failure isolation, repeat upserts, cross-source deduplication, distinct requisitions, SSRF allowlist rejection and duplicate process locks.
+- `test_domain.py`: graduation/CGPA/degree/experience/authorization boundaries, exact deadlines, unknown facts, extraction uncertainty, preferred skills, ranking suppression, evidence honesty, learning demand, parsing and URL validation.
+- `test_api.py`: registration/login, CSRF/origin/rotation/logout/rate limits, tenant isolation, profile editing, milestones/history/funnel, notifications, manual/campus jobs and supporting modules.
+- `test_sources.py`: vendor fixtures, HTTP retries, savepoints, source failure isolation, repeat upserts, deduplication/requisitions, SSRF restrictions and duplicate locks.
+- `test_reliability.py`: conservative occurrence closure/reappearance, archive persistence, source edits/identity guards, shared writes, password whitespace/change/recovery, resume integrity, chunked body limits, seven-day summaries, uncertain dates, readiness revision, provider retries and continuation after worker failure.
+- `test_migrations.py`: actual Alembic upgrade, seed, immutable UPDATE/DELETE rejection, latest downgrade/upgrade with data retention, and schema drift. Runs on the configured disposable SQLite or PostgreSQL database.
 
-Run migrations separately: `alembic upgrade head && alembic check`. CI tests on native PostgreSQL 17, then migrates, seeds and executes workers. Migration triggers are installed only by Alembic; unit fixtures use metadata tables. The verification script additionally checks immutability against a migrated database.
+Most fixtures use metadata tables; the migration test deliberately installs actual triggers and restores the isolated database afterward. Run release migrations independently with `alembic upgrade head && alembic check` as well. CI runs the suite, migrations, seed and workers on native PostgreSQL 17.
 
 ## Frontend
 
-`npm run test`: component tests for visible eligibility labels, demo labels, detail/save callbacks, saved-job disabled state and useful error/empty UI.
+From `apps/web`, run `npm run lint`, `npm run typecheck`, `npm run test`, and `npm run build`. Component tests cover visible decisions/demo labels, detail/save callbacks, saved state, useful errors/empty UI and accessible labels.
 
-`npm run lint`, `npm run typecheck`, `npm run build`: syntax, types, framework rules and production compilation.
+## Complete browser verification
 
-## Browser end-to-end
+After installing backend dependencies and from the repository root:
 
-Install Chromium once with `npx playwright install chromium`. Start backend and production frontend, seed a demo account, set `DEMO_PASSWORD`, and run `npm run test:e2e` from `apps/web`.
+```bash
+cd apps/web
+npm ci
+npx playwright install chromium
+npm run build
+cd ../..
+scripts/verify-browser.sh
+```
 
-The suite creates an independent test account, edits the profile, adds a role, checks eligibility and explanations, saves it, advances through Applied/OA/Interview, verifies history/dashboard/learning, generates notifications, visits every primary route, checks mobile overflow and records screenshots. A separate test logs into the seed account, inspects demo data and checks light/dark themes.
+The script creates a fresh temporary SQLite database, migrates and seeds it, starts the real API plus production frontend, runs all three Playwright journeys and shuts down its servers. It never reuses the developer's root `.env` database. A test-only server entry point replaces the external Greenhouse transport with deterministic source fixtures; it refuses to run without explicit development/test settings. Application logic remains real.
 
-`scripts/verify-browser.sh` can start both servers and run the suite. It uses `.venv`, expects a migrated/seeded database and an existing frontend build. Optional environment variables: `WEB_PORT`, `API_PORT`, `DEMO_PASSWORD`, `CHROMIUM_EXECUTABLE_PATH` for an already installed portable browser, and `SKIP_AGENT_BROWSER=1` to run Playwright directly.
+Optional variables: `PYTHON_BIN` (defaults to `.venv/bin/python`), `WEB_PORT`, `API_PORT`, `DEMO_PASSWORD`, `CHROMIUM_EXECUTABLE_PATH` (portable browser), and `E2E_DATABASE_URL` for a **disposable** PostgreSQL database. If the frontend build used `NEXT_DIST_DIR`, pass the same value to this script. Native PostgreSQL browser verification is configured in CI.
 
-Browser evidence belongs in `docs/screenshots`; transient traces/reports are ignored. CI uploads failure screenshots/traces as workflow artifacts.
+Journeys cover manual job → eligibility → save → application stages/history → alerts/dashboard/learning; seeded login/themes/responsive navigation; and source failure → edit → retry → deduplication → human confirmation → archive/refresh/restore → resume/password edit → new-password login. Screenshots and traces are recorded in ignored test output; CI uploads them on failures.
 
-## Network integration checks
+For debugging against already running servers, `npm run test:e2e` is also available, but the fixture-feed journey is skipped unless `E2E_FIXTURE_FEED=1` and the fixture server are configured. Use the provided harness for complete verification.
 
-Public-source fixture tests are deterministic and run offline. Live checks are separately reported in `VERIFICATION.md`; public boards can change, close or restrict traffic after a passing check. A source returning zero jobs is not proof of a normalization failure. Email/LLM network integration is not considered verified without configured credentials.
+## Containers and external integrations
+
+The CI `containers` job builds Compose images, starts PostgreSQL/API/frontend, checks readiness through the frontend gateway, seeds and executes `run-cycle`. It is a configured gate until that workflow actually runs.
+
+Source fixtures are deterministic and offline. Live checks are reported separately in `VERIFICATION.md`; boards can change after a passing check. A zero-record feed is not proof of normalization failure. Provider tests use mocked transports; real email/AI integration requires configured credentials and separate smoke checks.
 
 ## What passing tests do not establish
 
-A production build is not proof of deployment. SQLite is not proof of native PostgreSQL concurrency. Embedded PostgreSQL validates SQL/type behavior but not multi-session advisory locking. A captured desktop screenshot does not prove every mobile dialog fits. No test here predicts hiring outcomes or legal eligibility.
+A production build is not proof of deployment. SQLite is not proof of native PostgreSQL concurrency. Embedded PostgreSQL validates SQL/type behavior but not multi-session advisory locking. Screenshots do not prove every possible mobile dialog fits. No test predicts hiring outcomes or legal eligibility.

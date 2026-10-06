@@ -189,3 +189,23 @@ A PostgreSQL session advisory lock requires a dedicated stable connection; trans
 “CareerOS ingests public or manually entered job postings into a canonical database. It checks hard eligibility against my editable profile before calculating an explainable weighted score. It preserves source evidence, tracks application events and uses relevant skill demand to prioritize learning. A separate scheduled CLI reuses the same services for ingestion and alerts. The UI is a Next.js workspace over an authenticated FastAPI backend. I chose deterministic rules for factual decisions, a relational database for integrity, and cron rather than a queue because the workload is initially personal scale.”
 
 Then demonstrate one difficult case, such as CGPA 7.38 vs requirement 8.0, and one operational case, such as a failed source leaving other sources healthy. Be candid about heuristic parsing, manual visa research, account-recovery limitations and what has actually been deployed.
+
+## 11. Reliability lessons from completing V1
+
+Read `test_reliability.py`, `test_migrations.py` and `tests/e2e/ingestion.spec.ts` alongside the implementations. These are regression tests for meaningful failures discovered during review.
+
+**One job, several occurrences.** A canonical opportunity can appear on two boards. Model availability per occurrence, then close the canonical job only when none remain active. Missing is not necessarily closed: an empty or partially broken feed is weak evidence. Requiring repeated healthy snapshots makes that assumption explicit and configurable. A user's deliberate archive is separate metadata and survives automated refresh.
+
+**Uncertainty must survive the entire workflow.** Marking AI output unconfirmed in a parser is insufficient if an expiry worker later trusts that date. Trace a deadline through parsing, provenance, eligibility, reminders and expiry. Human confirmation must change the same fact used by all those consumers.
+
+**Locks and unique constraints solve different problems.** A per-user writer lock serializes deduplication and edits for one workspace. A global company or skill can still be discovered by two different users at once. Atomic conflict-safe insertion handles that shared identity without broad global locking. SQLite and embedded PostgreSQL checks do not prove native multi-session behavior; native PostgreSQL CI is a separate gate.
+
+**Retry depends on consequences.** GET source fetches can usually be retried after transport errors. A POST may have succeeded before its response was lost. Resend retries reuse an idempotency key; optional AI calls avoid automatic retries after ambiguous failures. Read `outbound.py` and compare the tests for 429, server errors and transport failures.
+
+**Time windows are product requirements.** A Monday weekly summary should include the preceding seven days, not start counting from that same Monday. Dashboard funnel totals and recent application activity are different metrics. Explicit labels and boundary tests prevent plausible but misleading reports.
+
+**Migrations are executable code.** Metadata-created test tables omit migration triggers. The migration test installs the real schema, seeds data, proves history cannot be rewritten and checks retention across downgrade/upgrade. `/ready` verifies the exact schema revision the deployed application expects; `/health` only verifies the process responds.
+
+**Test the whole user action.** The third browser journey starts with a failed source, edits it, ingests two occurrences into one job, confirms uncertain facts, archives/reimports/restores, records an application, edits resume metadata and changes credentials. Only the remote feed is replaced. This catches route/form/cache/integration failures that isolated mocks miss.
+
+**Practice:** Run `scripts/verify-browser.sh`, read one failure trace, then run `python -m worker run-cycle` twice against a disposable database. Explain why duplicate notifications are prevented and why a failed ingestion stage should not suppress all deadline alerts. Never point destructive test fixtures at personal or production data.

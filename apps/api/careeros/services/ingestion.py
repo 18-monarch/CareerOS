@@ -1,13 +1,40 @@
 import logging
 import time
 
-from careeros.models import SourceRun
+from careeros.models import Job, Occurrence, SourceRun
 from careeros.services.locking import job_lock
-from careeros.services.repository import upsert_job
+from careeros.services.repository import identity, upsert_job
 from careeros.services.sources import ADAPTERS
 from sqlalchemy import select
 
 logger = logging.getLogger("careeros.ingestion")
+
+
+def reconcile_missing(db, source, seen):
+    threshold = source.config.get("close_missing_after", 0)
+    if not threshold or not seen:
+        return 0
+    affected = set()
+    for occurrence in db.scalars(select(Occurrence).where(Occurrence.source_id == source.id)):
+        if occurrence.external_id not in seen:
+            occurrence.missing_runs += 1
+            if occurrence.missing_runs >= threshold:
+                occurrence.is_active = False
+                affected.add(occurrence.job_id)
+    db.flush()
+    closed = 0
+    for job_id in affected:
+        active = db.scalar(
+            select(Occurrence.id)
+            .where(Occurrence.job_id == job_id, Occurrence.is_active.is_(True))
+            .limit(1)
+        )
+        job = db.get(Job, job_id)
+        if not active and job.is_active:
+            job.is_active = False
+            job.data = {**job.data, "source_closed": True}
+            closed += 1
+    return closed
 
 
 async def ingest_source(db, source):
@@ -18,7 +45,13 @@ async def ingest_source(db, source):
             return {"status": "RUNNING", "fetched": 0, "added": 0, "updated": 0, "parse_errors": 0}
         start = time.monotonic()
         run = SourceRun(
-            source_id=source.id, status="HEALTHY", fetched=0, added=0, updated=0, parse_errors=0
+            source_id=source.id,
+            status="HEALTHY",
+            fetched=0,
+            added=0,
+            updated=0,
+            parse_errors=0,
+            closed=0,
         )
         db.add(run)
         db.flush()
@@ -28,11 +61,13 @@ async def ingest_source(db, source):
             if not isinstance(records, list):
                 raise ValueError("Source response must contain a job list")
             run.fetched = len(records)
+            seen = set()
             for raw in records:
                 try:
                     with db.begin_nested():
                         normalized = adapter.normalize_job(raw)
                         _, created = upsert_job(db, source.user_id, normalized, source, raw)
+                    seen.add(normalized.external_id or identity(normalized.model_dump(mode="json")))
                     run.added += int(created)
                     run.updated += int(not created)
                 except Exception as exc:
@@ -43,6 +78,8 @@ async def ingest_source(db, source):
                     )
             if run.parse_errors:
                 run.status = "DEGRADED"
+            else:
+                run.closed = reconcile_missing(db, source, seen)
         except Exception as exc:
             run.status = "FAILED"
             run.error = f"{type(exc).__name__}: source request or normalization failed; check configured board/feed and worker logs"
@@ -68,6 +105,7 @@ async def ingest_source(db, source):
                 "fetched",
                 "added",
                 "updated",
+                "closed",
                 "parse_errors",
                 "runtime_ms",
                 "error",
@@ -118,6 +156,7 @@ def health_summary(db, sources):
                         "fetched",
                         "added",
                         "updated",
+                        "closed",
                         "parse_errors",
                         "runtime_ms",
                         "error",

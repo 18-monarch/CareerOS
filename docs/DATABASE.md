@@ -38,9 +38,11 @@ The production database is PostgreSQL, compatible with Neon. SQLite runs the sam
 .venv/bin/alembic revision --autogenerate -m 'Describe the schema change'
 ```
 
-Review generated migrations, particularly constraints and data conversions. Never substitute `create_all()` for migrations in production. The first migration contains explicit table/column definitions; the second installs immutable-history triggers. `create_all()` is used only in isolated tests.
+Review generated migrations, particularly constraints and data conversions. Never substitute `create_all()` for migrations in production. The first migration contains explicit table/column definitions; the second installs immutable-history triggers. The third (`c61f03`) adds occurrence availability/missing-run counts and source-run closure counts. The API readiness check requires this exact head. `create_all()` is used only in isolated tests; `test_migrations.py` separately exercises the real upgrade/downgrade path and history triggers.
 
 Use a database backup before production migration. Schema rollback: first inspect the downgrade and test on a copy. Backing up/restoring Neon branches is preferable to blindly downgrading a database after user writes.
+
+Shared companies and skills use atomic conflict-safe inserts, so two users can independently discover the same global identity without an integrity error. Personal skill category overrides stay in `user_skills.data`; editing one profile does not change another user’s category.
 
 ## JSON design
 

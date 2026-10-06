@@ -101,3 +101,13 @@ def current_user(request: Request, db: Session = Depends(get_db)):
     if not user:
         raise HTTPException(401, "Authentication required")
     return user
+
+
+def job_writer(user: User = Depends(current_user), db: Session = Depends(get_db)):
+    """Manual edits and ingestion use the same per-user canonical-job lock."""
+    from careeros.services.locking import job_lock
+
+    with job_lock(db.bind, f"ingest-user:{user.id}") as acquired:
+        if not acquired:
+            raise HTTPException(409, "Job processing is running. Wait for it to finish and retry.")
+        yield user

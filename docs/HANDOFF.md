@@ -2,7 +2,7 @@
 
 ## What was built
 
-A functional personal career workspace: editable candidate profile; Greenhouse, Lever, Ashby and approved JSON-feed ingestion; manual/campus jobs; canonical deduplication; deterministic eligibility and matching; application tracking with immutable history; learning priorities; DSA/project mastery; notifications; source health; sourced market and international-rule notes. Includes responsive dark/light frontend, REST backend, workers, migrations, explicit demo seed, tests, CI, deployment configuration and study documentation.
+A functional personal career workspace: editable candidate profile; Greenhouse, Lever, Ashby and approved JSON-feed ingestion; manual/campus jobs; canonical deduplication; deterministic eligibility and matching; application tracking with immutable history; learning priorities; DSA/project mastery; notifications; source health; sourced market and international-rule notes. This continuation adds editable sources/resumes, conservative missing-posting closure, persistent archive/restore, password changes/operator recovery, seven-day summaries, safe provider retries and a resilient scheduled cycle. Includes responsive dark/light frontend, REST backend, workers, migrations, explicit demo seed, tests, CI, deployment configuration and study documentation.
 
 ## Architecture
 
@@ -23,7 +23,7 @@ make seed
 make api
 ```
 
-In another terminal run `make web`, then open http://localhost:3000. The seed email is `mohit@example.com`; the password is the value you supplied. Alternatively register an empty account. README.md contains the exact non-Make commands, Windows notes and worker commands. API documentation runs at http://localhost:8000/docs.
+In another terminal run `make web`, then open http://localhost:3000. The seed email is `mohit@example.com`; the password is the value you supplied. Alternatively create an empty account with `python -m careeros.manage create-user --email your@email.example --name "Your name"`, or register while registration is enabled. README.md contains the exact non-Make commands, Windows notes and worker commands. API documentation runs at http://localhost:8000/docs.
 
 ## Environment variables required
 
@@ -35,17 +35,17 @@ Create Neon PostgreSQL and use its direct connection endpoint. Apply the Render 
 
 ## Test results
 
-36 backend tests, 5 frontend component tests and 2 Chromium E2E tests passed. Lint, formatting, TypeScript and production build passed. Migrations, all seven worker commands, navigation and mobile layout were exercised. Live Greenhouse ingestion and Ashby normalization were verified. PostgreSQL SQL/type checks passed 28 tests using embedded PostgreSQL; native multi-session PostgreSQL concurrency remains a deployment/CI gate. Read VERIFICATION.md for evidence and precise exclusions.
+58 backend tests, 5 frontend component tests and 3 Chromium E2E tests passed. Lint, formatting, TypeScript and production build passed. Migrations, all eight worker commands, navigation and mobile layout were exercised. Live Greenhouse ingestion and Ashby normalization were verified. Current migrations, seed, downgrade/upgrade, schema drift and immutable-history triggers passed using embedded PostgreSQL; native multi-session PostgreSQL concurrency remains a deployment/CI gate. Read VERIFICATION.md for evidence and precise exclusions.
 
 ## Known limitations
 
-This is intended for personal/private use. Account verification, self-service password recovery and MFA are not implemented. Resume support is metadata only. Market and visa notes require sourced manual review. Ranking loads a user's jobs into memory. Missing source postings are not automatically closed. Heuristic scores are not hiring probabilities. Docker images, cloud deployment, real email and credentialed AI calls were not executed here. Full native PostgreSQL CI is provided but has not run remotely.
+This is intended for personal/private use. Account verification, self-service password recovery and MFA are not implemented. Resume support is metadata only. Market and visa notes require sourced manual review. Ranking loads a user's jobs into memory. Missing-posting reconciliation is opt-in and deliberately ignores empty/failed/partial snapshots. Heuristic scores are not hiring probabilities. Docker images, cloud deployment, real email and credentialed AI calls were not executed here. Full native PostgreSQL CI is provided but has not run remotely.
 
 ## Next best improvements
 
 1. Run native PostgreSQL CI and hosted smoke checks with actual deployment credentials.
 2. Add verified account recovery before allowing public registration.
-3. Add source configuration editing, source-specific closure reconciliation and richer job revision history.
+3. Add richer job revision history and broader extraction coverage.
 4. Generate frontend types from OpenAPI; move candidate filtering into SQL only when volume warrants it.
 
 ## Most important files to study

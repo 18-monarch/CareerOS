@@ -1,5 +1,5 @@
 import html
-from datetime import datetime
+from datetime import UTC, datetime, timedelta
 from typing import Protocol
 
 import httpx
@@ -7,7 +7,9 @@ from careeros.config import get_settings
 from careeros.db import utcnow
 from careeros.models import Application, Notification
 from careeros.services.analytics import funnel
+from careeros.services.eligibility import unconfirmed
 from careeros.services.matching import skill_gaps
+from careeros.services.outbound import post_json
 from careeros.services.repository import profile_data, ranked_jobs
 from sqlalchemy import select
 
@@ -25,20 +27,20 @@ class ResendEmail:
     async def send(self, recipient, title, body, key):
         settings = get_settings()
         async with httpx.AsyncClient(timeout=15) as client:
-            response = await client.post(
+            await post_json(
+                client,
                 "https://api.resend.com/emails",
                 headers={
                     "Authorization": f"Bearer {settings.resend_api_key}",
                     "Idempotency-Key": key,
                 },
-                json={
+                payload={
                     "from": settings.email_from,
                     "to": [recipient],
                     "subject": title,
                     "html": f"<pre>{html.escape(body)}</pre>",
                 },
             )
-            response.raise_for_status()
         return True
 
 
@@ -62,8 +64,9 @@ def generate(db, user, kind):
     )
     created = 0
     if kind == "high-match":
+        already_tracked = {a.job_id for a in applications}
         for job in jobs:
-            if job["match"]["classification"] == "APPLY_NOW":
+            if job["match"]["classification"] == "APPLY_NOW" and job["id"] not in already_tracked:
                 created += create_notification(
                     db,
                     user.id,
@@ -75,6 +78,8 @@ def generate(db, user, kind):
     elif kind == "deadline":
         for job in jobs:
             deadline = job["application_deadline"]
+            if unconfirmed(job.get("provenance", {}), "application_deadline"):
+                continue
             if not deadline or job["match"]["eligibility"]["state"] in ("CLOSED", "NOT_ELIGIBLE"):
                 continue
             if any(
@@ -96,15 +101,19 @@ def generate(db, user, kind):
                     f"{job['title']} closes {deadline.isoformat()} UTC. {'Synthetic demo.' if job['is_demo'] else ''}",
                 )
         for app in applications:
-            actions = [("OA", app.data.get("oa_deadline"))] + [
-                ("Interview", d) for d in app.data.get("interview_dates", [])
-            ]
+            actions = (
+                [("OA", app.data.get("oa_deadline"))]
+                if app.status in ("APPLIED", "OA_RECEIVED")
+                else []
+            ) + [("Interview", d) for d in app.data.get("interview_dates", [])]
             if app.status in ("REJECTED", "WITHDRAWN", "EXPIRED", "OFFER"):
                 continue
             for label, date in actions:
                 if not date:
                     continue
-                when = datetime.fromisoformat(date.replace("Z", "+00:00")).replace(tzinfo=None)
+                when = datetime.fromisoformat(date.replace("Z", "+00:00"))
+                if when.tzinfo:
+                    when = when.astimezone(UTC).replace(tzinfo=None)
                 if 0 < (when - now).total_seconds() <= 86400 * 3:
                     created += create_notification(
                         db,
@@ -115,12 +124,73 @@ def generate(db, user, kind):
                         f"{app.job.title} · {date}",
                     )
     elif kind in ("daily", "weekly"):
-        relevant = [j for j in jobs if j["created_at"].date() == now.date()]
+        start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+        if kind == "weekly":
+            start = now - timedelta(days=7)
+        relevant = [j for j in jobs if start <= j["created_at"] <= now]
         metrics = funnel(applications)
         gaps = skill_gaps(jobs)[:3]
         period = now.strftime("%G-W%V") if kind == "weekly" else now.date().isoformat()
         title = "Weekly career summary" if kind == "weekly" else "Your daily career digest"
-        body = f"{len(relevant)} opportunities discovered today. {sum(j['match']['classification'] == 'APPLY_NOW' for j in jobs)} ready to apply. {metrics['sample_size']} applications recorded.\n{metrics['recommendation']}\nLearning priorities: {', '.join(g['skill'] for g in gaps) or 'No missing skills in relevant postings yet'}.\nCheck your application deadlines in CareerOS."
+        submitted = {
+            a.job_id
+            for a in applications
+            if a.status not in ("DISCOVERED", "SAVED", "PLANNING_TO_APPLY")
+        }
+        actionable = [
+            j
+            for j in jobs
+            if j["id"] not in submitted
+            and j["match"]["eligibility"]["state"] not in ("CLOSED", "NOT_ELIGIBLE")
+        ]
+        deadlines = sorted(
+            [
+                j
+                for j in actionable
+                if j["application_deadline"]
+                and not unconfirmed(j.get("provenance", {}), "application_deadline")
+                and now < j["application_deadline"] <= now + timedelta(days=7)
+            ],
+            key=lambda j: j["application_deadline"],
+        )
+        period_label = "in the last 7 days" if kind == "weekly" else "today (UTC)"
+        new_applications = sum(
+            a.applied_at is not None and start <= a.applied_at <= now for a in applications
+        )
+        actions = []
+        for application in applications:
+            if application.status in ("REJECTED", "WITHDRAWN", "EXPIRED", "OFFER"):
+                continue
+            if application.status == "PLANNING_TO_APPLY":
+                actions.append(f"Apply: {application.job.company.name} — {application.job.title}")
+            if application.status in ("APPLIED", "OA_RECEIVED") and application.data.get(
+                "oa_deadline"
+            ):
+                actions.append(
+                    f"OA: {application.job.company.name} — {application.data['oa_deadline']} UTC"
+                )
+            actions.extend(
+                f"Interview: {application.job.company.name} — {d} UTC"
+                for d in application.data.get("interview_dates", [])
+                if datetime.fromisoformat(d.replace("Z", "+00:00")).replace(tzinfo=None) >= now
+            )
+        body = (
+            f"{len(relevant)} opportunities discovered {period_label}. "
+            f"{sum(j['match']['classification'] == 'APPLY_NOW' for j in actionable)} ready to apply. "
+            f"{new_applications} applications submitted {period_label}.\n"
+            f"All-time funnel ({metrics['sample_size']} applications): {metrics['recommendation']}\n"
+            f"Learning priorities: {', '.join(g['skill'] for g in gaps) or 'No missing skills in relevant postings yet'}.\n"
+            "Deadlines in the next 7 days:\n"
+            + (
+                "\n".join(
+                    f"- {j['company_name']} — {j['title']}: {j['application_deadline'].isoformat()} UTC"
+                    for j in deadlines[:10]
+                )
+                or "None recorded."
+            )
+            + "\nApplication actions:\n"
+            + ("\n".join(f"- {a}" for a in actions[:10]) or "None recorded.")
+        )
         created += create_notification(db, user.id, f"{kind}:{period}", kind, title, body)
     db.commit()
     return created

@@ -148,7 +148,8 @@ export default function JobDetail({
             <summary>Source references</summary>
             {job.occurrences?.map((o) => (
               <p key={o.source_id + o.external_id}>
-                {o.external_id} · Last seen {date(o.last_seen_at)}{" "}
+                {o.external_id} · Last seen {date(o.last_seen_at)} ·{" "}
+                {o.is_active ? "Listed" : "No longer listed"}{" "}
                 {o.source_url && (
                   <a href={o.source_url} target="_blank" rel="noreferrer">
                     Original source
@@ -192,15 +193,25 @@ export default function JobDetail({
             )}
             <button
               className="button quiet"
-              disabled={action.busy || !job.is_active}
+              disabled={
+                action.busy || (!job.is_active && !job.manually_archived)
+              }
               onClick={() =>
-                action.run(async () => {
-                  await api(`/jobs/${job.id}/archive`, { method: "PATCH" });
-                  await client.invalidateQueries();
-                }, "Opportunity archived")
+                action.run(
+                  async () => {
+                    await api(
+                      `/jobs/${job.id}/${job.manually_archived ? "restore" : "archive"}`,
+                      { method: "PATCH" },
+                    );
+                    await client.invalidateQueries();
+                  },
+                  job.manually_archived
+                    ? "Opportunity restored; eligibility reevaluated"
+                    : "Opportunity archived",
+                )
               }
             >
-              Archive
+              {job.manually_archived ? "Restore" : "Archive"}
             </button>
           </div>
         </>

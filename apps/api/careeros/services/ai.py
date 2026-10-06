@@ -6,6 +6,7 @@ from typing import Protocol
 import httpx
 from careeros.config import get_settings
 from careeros.schemas import JobIn
+from careeros.services.outbound import post_json
 from careeros.services.parsing import parse_notice
 
 
@@ -23,10 +24,11 @@ class OpenAICompatible:
         s = get_settings()
         try:
             async with httpx.AsyncClient(timeout=30) as client:
-                response = await client.post(
+                response = await post_json(
+                    client,
                     s.ai_base_url.rstrip("/") + "/chat/completions",
                     headers={"Authorization": f"Bearer {s.ai_api_key}"},
-                    json={
+                    payload={
                         "model": s.ai_model,
                         "messages": [
                             {
@@ -49,7 +51,7 @@ class OpenAICompatible:
                     "confirmed": False,
                     "source_text": "LLM proposal; verify in original posting",
                 }
-                for k in job.requirements.model_dump()
+                for k in [*job.requirements.model_dump(), "application_deadline", "expires_at"]
             }
             return {
                 "job": job.model_dump(mode="json"),

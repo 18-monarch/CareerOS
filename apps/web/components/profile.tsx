@@ -28,6 +28,7 @@ export default function Profile() {
       {isPending ? <Loading /> : data && <ProfileForm profile={data} />}
       <Skills />
       <Resumes />
+      <PasswordForm />
     </>
   );
 }
@@ -327,26 +328,27 @@ function Skills() {
     </section>
   );
 }
+interface ResumeMetadata {
+  id: string;
+  name: string;
+  file_name: string;
+  is_master: boolean;
+  version: string;
+  notes: string;
+}
 function Resumes() {
+  const [editing, setEditing] = useState<ResumeMetadata | null>(null);
   const client = useQueryClient(),
     action = useAction();
-  const { data } = useQuery({
+  const { data, error } = useQuery({
     queryKey: ["resumes"],
-    queryFn: () =>
-      api<
-        {
-          id: string;
-          name: string;
-          file_name: string;
-          is_master: boolean;
-          version: string;
-        }[]
-      >("/resumes"),
+    queryFn: () => api<ResumeMetadata[]>("/resumes"),
   });
   return (
     <section className="panel spaced">
       <h2>Resume versions</h2>
       <p className="muted">Track metadata only. Resume files stay with you.</p>
+      <ErrorBox error={error} />
       {data?.map((r) => (
         <div className="list-row" key={r.id}>
           <span>
@@ -354,6 +356,9 @@ function Resumes() {
             {r.is_master ? " · Master" : ""}
             <small>{r.file_name}</small>
           </span>
+          <button className="text-button" onClick={() => setEditing(r)}>
+            Edit
+          </button>
           <button
             className="text-button danger"
             onClick={() =>
@@ -368,40 +373,133 @@ function Resumes() {
         </div>
       ))}
       <Form
+        key={editing?.id || "new-resume"}
         onSubmit={(e) => {
           const f = new FormData(e.currentTarget);
           action.run(async () => {
-            await send("/resumes", {
-              name: f.get("name"),
-              file_name: f.get("file_name"),
-              version: f.get("version"),
-              notes: f.get("notes"),
-              is_master: !!f.get("is_master"),
-            });
+            await send(
+              editing ? `/resumes/${editing.id}` : "/resumes",
+              {
+                name: f.get("name"),
+                file_name: f.get("file_name"),
+                version: f.get("version"),
+                notes: f.get("notes"),
+                is_master: !!f.get("is_master"),
+              },
+              editing ? "PUT" : "POST",
+            );
+            setEditing(null);
             await client.invalidateQueries();
           });
         }}
       >
         <div className="two-col">
           <Field label="Resume name">
-            <input name="name" required placeholder="Master resume" />
+            <input
+              name="name"
+              required
+              defaultValue={editing?.name}
+              placeholder="Master resume"
+            />
           </Field>
           <Field label="File name">
-            <input name="file_name" placeholder="Mohit_Resume.pdf" />
+            <input
+              name="file_name"
+              defaultValue={editing?.file_name}
+              placeholder="Mohit_Resume.pdf"
+            />
           </Field>
           <Field label="Version">
-            <input name="version" defaultValue="1" />
+            <input name="version" defaultValue={editing?.version || "1"} />
           </Field>
           <Field label="Notes">
-            <input name="notes" />
+            <input name="notes" defaultValue={editing?.notes} />
           </Field>
         </div>
         <label className="checkbox">
-          <input type="checkbox" name="is_master" />
+          <input
+            type="checkbox"
+            name="is_master"
+            defaultChecked={editing?.is_master}
+          />
           Set as master resume
         </label>
         <Feedback {...action} />
-        <Submit busy={action.busy}>Add resume metadata</Submit>
+        <div className="form-actions">
+          <Submit busy={action.busy}>
+            {editing ? "Update resume metadata" : "Add resume metadata"}
+          </Submit>
+          {editing && (
+            <button
+              type="button"
+              className="button"
+              onClick={() => setEditing(null)}
+            >
+              Cancel edit
+            </button>
+          )}
+        </div>
+      </Form>
+    </section>
+  );
+}
+
+function PasswordForm() {
+  const action = useAction();
+  return (
+    <section className="panel spaced">
+      <h2>Account security</h2>
+      <p className="muted">
+        Changing your password signs out your other sessions.
+      </p>
+      <Form
+        onSubmit={(event) => {
+          const form = event.currentTarget;
+          const f = new FormData(form);
+          action.run(async () => {
+            if (f.get("new_password") !== f.get("confirm_password"))
+              throw new Error("The new passwords do not match.");
+            await send("/auth/password", {
+              current_password: f.get("current_password"),
+              new_password: f.get("new_password"),
+            });
+            form.reset();
+          }, "Password changed. Other sessions have been signed out.");
+        }}
+      >
+        <Field label="Current password">
+          <input
+            name="current_password"
+            type="password"
+            required
+            autoComplete="current-password"
+            maxLength={128}
+          />
+        </Field>
+        <div className="two-col">
+          <Field label="New password" hint="At least 12 characters.">
+            <input
+              name="new_password"
+              type="password"
+              required
+              minLength={12}
+              maxLength={128}
+              autoComplete="new-password"
+            />
+          </Field>
+          <Field label="Confirm new password">
+            <input
+              name="confirm_password"
+              type="password"
+              required
+              minLength={12}
+              maxLength={128}
+              autoComplete="new-password"
+            />
+          </Field>
+        </div>
+        <Feedback {...action} />
+        <Submit busy={action.busy}>Change password</Submit>
       </Form>
     </section>
   );

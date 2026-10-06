@@ -22,6 +22,29 @@ from careeros.services.matching import match, skill_key
 from sqlalchemy import select
 
 
+def shared_record(db, model, key, value, **fields):
+    """The unique constraint arbitrates cross-user races without aborting ingestion."""
+    record = db.scalar(select(model).where(getattr(model, key) == value))
+    if record:
+        return record
+    from sqlalchemy.dialects.postgresql import insert as pg_insert
+    from sqlalchemy.dialects.sqlite import insert as sqlite_insert
+
+    insert = pg_insert if db.bind.dialect.name == "postgresql" else sqlite_insert
+    db.execute(
+        insert(model)
+        .values(**{key: value}, **fields)
+        .on_conflict_do_nothing(index_elements=[getattr(model, key)])
+    )
+    return db.scalar(select(model).where(getattr(model, key) == value))
+
+
+def company_record(db, name, domain=None):
+    return shared_record(
+        db, Company, "normalized_name", normalized_text(name), name=name, domain=domain
+    )
+
+
 def normalized_text(text):
     return re.sub(r"[^a-z0-9]+", " ", text.casefold()).strip()
 
@@ -53,12 +76,7 @@ def identity(data):
 
 def skill_record(db, name, category="Programming"):
     key = skill_key(name)
-    record = db.scalar(select(Skill).where(Skill.name == key))
-    if not record:
-        record = Skill(name=key, category=category)
-        db.add(record)
-        db.flush()
-    return record
+    return shared_record(db, Skill, "name", key, category=category)
 
 
 def profile_data(db, user):
@@ -175,16 +193,7 @@ def upsert_job(db, user_id, input_job, source, raw=None):
         if occurrence
         else db.scalar(select(Job).where(Job.user_id == user_id, Job.canonical_key == canonical))
     )
-    company_key = normalized_text(input_job.company_name)
-    company = db.scalar(select(Company).where(Company.normalized_name == company_key))
-    if not company:
-        company = Company(
-            name=input_job.company_name,
-            normalized_name=company_key,
-            domain=input_job.company_domain,
-        )
-        db.add(company)
-        db.flush()
+    company = company_record(db, input_job.company_name, input_job.company_domain)
     # Conservative cross-source fuzzy fallback: same company, location, type, no conflicting requisition IDs.
     if not job:
         for candidate in db.scalars(
@@ -223,6 +232,15 @@ def upsert_job(db, user_id, input_job, source, raw=None):
     if created:
         job = Job(user_id=user_id, company_id=company.id, canonical_key=canonical)
         db.add(job)
+    metadata = job.data or {}
+    primary_source = metadata.get("primary_source_id")
+    if not created and not primary_source:
+        primary_source = db.scalar(
+            select(Occurrence.source_id)
+            .where(Occurrence.job_id == job.id)
+            .order_by(Occurrence.created_at, Occurrence.id)
+            .limit(1)
+        )
     fields = [
         "title",
         "normalized_role",
@@ -244,22 +262,26 @@ def upsert_job(db, user_id, input_job, source, raw=None):
     # An existing canonical record is updated only by its primary source; secondary copies add provenance.
     if (
         created
-        or (occurrence and job.source == source.kind and not job.data.get("human_reviewed"))
+        or (occurrence and primary_source == source.id and not metadata.get("human_reviewed"))
         or input_job.source in ("manual", "campus")
     ):
         for key in fields:
             setattr(job, key, getattr(input_job, key))
         job.data = {
-            k: data[k]
-            for k in (
-                "requisition_id",
-                "salary_min",
-                "salary_max",
-                "salary_currency",
-                "salary_period",
-                "stipend",
-                "selection_stages",
-            )
+            **metadata,
+            "primary_source_id": primary_source or source.id,
+            **{
+                k: data[k]
+                for k in (
+                    "requisition_id",
+                    "salary_min",
+                    "salary_max",
+                    "salary_currency",
+                    "salary_period",
+                    "stipend",
+                    "selection_stages",
+                )
+            },
         }
         if created:
             job.requirements = JobRequirement(
@@ -278,6 +300,11 @@ def upsert_job(db, user_id, input_job, source, raw=None):
             job.skills.append(
                 JobSkill(skill_id=skill_record(db, name).id, required=name in required)
             )
+    if metadata.get("manually_archived"):
+        job.is_active = False
+    elif metadata.get("source_closed") and input_job.is_active:
+        job.is_active = True
+        job.data = {**job.data, "source_closed": False}
     job.last_seen_at = utcnow()
     db.flush()
     if not occurrence:
@@ -286,5 +313,7 @@ def upsert_job(db, user_id, input_job, source, raw=None):
     occurrence.source_url = input_job.source_url
     occurrence.raw_payload = raw if raw is not None else data
     occurrence.last_seen_at = utcnow()
+    occurrence.is_active = input_job.is_active
+    occurrence.missing_runs = 0
     db.flush()
     return job, created

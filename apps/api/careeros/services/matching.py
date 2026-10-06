@@ -1,7 +1,6 @@
 from collections import defaultdict
-from datetime import datetime
 
-from careeros.db import utcnow
+from careeros.db import utc_naive, utcnow
 from careeros.schemas import DEFAULT_WEIGHTS
 from careeros.services.eligibility import evaluate
 
@@ -24,7 +23,7 @@ def skill_key(s):
 
 
 def match(profile, job, skills, projects, preferences, now=None):
-    now = now or utcnow()
+    now = utc_naive(now) if now else utcnow()
     eligibility = evaluate(profile, job, now)
     known = {
         skill_key(s["name"])
@@ -39,9 +38,7 @@ def match(profile, job, skills, projects, preferences, now=None):
     all_skills = required | preferred
     denominator = len(required) * 2 + len(preferred)
     r = job.get("requirements", {})
-    deadline = job.get("application_deadline")
-    if isinstance(deadline, str):
-        deadline = datetime.fromisoformat(deadline.replace("Z", "+00:00")).replace(tzinfo=None)
+    deadline = utc_naive(job.get("application_deadline"))
     days = (deadline - now).total_seconds() / 86400 if deadline else None
     roles = [x.casefold() for x in preferences.get("target_roles", [])]
     countries = preferences.get("countries", [])
