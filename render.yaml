@@ -1,0 +1,58 @@
+# yaml-language-server: $schema=https://render.com/schema/render.yaml.json
+# Creates resources only when you explicitly apply the Blueprint in Render.
+# Neon database is supplied through the environment group, not provisioned here.
+envVarGroups:
+  - name: careeros-production
+    envVars:
+      - key: DATABASE_URL
+        sync: false
+      - key: FRONTEND_ORIGIN
+        sync: false
+      - key: COOKIE_SECURE
+        value: "true"
+      - key: ENVIRONMENT
+        value: production
+      - key: REGISTRATION_ENABLED
+        value: "false"
+      - key: PYTHON_VERSION
+        value: "3.12.14"
+services:
+  - type: web
+    name: careeros-api
+    runtime: python
+    region: singapore
+    plan: starter
+    buildCommand: pip install -r requirements.lock && pip install --no-deps .
+    preDeployCommand: alembic upgrade head
+    startCommand: uvicorn careeros.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /ready
+    autoDeployTrigger: checksPass
+    envVars:
+      - fromGroup: careeros-production
+  - type: cron
+    name: careeros-ingestion
+    runtime: python
+    region: singapore
+    schedule: "15 */6 * * *"
+    buildCommand: pip install -r requirements.lock && pip install --no-deps .
+    startCommand: python -m worker ingest-jobs && python -m worker calculate-matches && python -m worker expire-jobs
+    envVars:
+      - fromGroup: careeros-production
+  - type: cron
+    name: careeros-daily
+    runtime: python
+    region: singapore
+    schedule: "30 2 * * *"
+    buildCommand: pip install -r requirements.lock && pip install --no-deps .
+    startCommand: python -m worker send-deadline-alerts && python -m worker send-daily-digest
+    envVars:
+      - fromGroup: careeros-production
+  - type: cron
+    name: careeros-weekly
+    runtime: python
+    region: singapore
+    schedule: "30 2 * * 1"
+    buildCommand: pip install -r requirements.lock && pip install --no-deps .
+    startCommand: python -m worker weekly-summary
+    envVars:
+      - fromGroup: careeros-production

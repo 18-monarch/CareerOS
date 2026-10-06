@@ -1,0 +1,43 @@
+services:
+  db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: careeros
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-careeros_local}
+      POSTGRES_DB: careeros
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U careeros -d careeros"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+  api:
+    profiles: ["app"]
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql+psycopg://careeros:${POSTGRES_PASSWORD:-careeros_local}@db:5432/careeros
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:8000:8000"
+    command: sh -c 'alembic upgrade head && uvicorn careeros.main:app --host 0.0.0.0 --port 8000'
+  web:
+    profiles: ["app"]
+    build:
+      context: apps/web
+    environment:
+      API_BASE_URL: http://api:8000
+      FRONTEND_ORIGIN: http://localhost:3000
+    depends_on:
+      - api
+    ports:
+      - "127.0.0.1:3000:3000"
+volumes:
+  postgres_data:
