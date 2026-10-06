@@ -51,7 +51,7 @@ This is intended for personal/private use. Account verification, self-service pa
 ## Most important files to study
 
 - apps/api/careeros/main.py, schemas.py and routers/: API boundaries and validation.
-- apps/api/careeros/models.py and apps/api/migrations/: relational design and schema evolution.
+- apps/api/careeros/models.py and apps/api/alembic/versions/: relational design and schema evolution.
 - apps/api/careeros/security.py and routers/auth.py: cookies, CSRF, password hashing and ownership.
 - apps/api/careeros/services/eligibility.py and matching.py: deterministic rules and explainable weighted scores.
 - apps/api/careeros/services/sources.py, repository.py and ingestion.py: adapter contracts, deduplication and fault isolation.
