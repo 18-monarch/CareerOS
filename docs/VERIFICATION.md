@@ -2,6 +2,12 @@
 
 Verification date: 6 October 2026. This report distinguishes executed checks from supplied configuration. No cloud deployment is claimed.
 
+## Windows installation fix — 8 October 2026
+
+The user's Windows log exposed unconditional `uvloop` installation plus download timeout/reset errors. The dependency locks were regenerated with `--universal`, preserving existing versions while adding platform markers and Windows-only dependencies. SQLite job locks now use Windows `msvcrt` or Unix `fcntl` as appropriate. Frontend metadata and setup docs now specify Node 24.15+; the reported Node 24.8 did not satisfy some installed packages.
+
+Executed for this fix: clean Python dependency installation/check, **61 backend tests passed**, **5 frontend component tests passed**, lint/type checks and a fresh production build. New regression coverage checks Windows dependency selection and actual inter-process lock contention/release. Native Windows execution is **not claimed**: the new `windows-local` CI job is configured but has not run remotely. Earlier browser and PostgreSQL evidence below is from October 6, not a Windows test.
+
 ## Current release: executed and passed
 
 | Check | Result / evidence |

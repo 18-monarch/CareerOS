@@ -48,7 +48,7 @@ Next.js 16.3.8, React, TypeScript, Tailwind CSS, TanStack Query and Zod; Python 
 
 ## Local setup
 
-Requirements: Python 3.12+, Node.js 24 LTS, npm; Docker for the preferred PostgreSQL path. Commands below run from the repository root. On Windows, use WSL2 or replace `.venv/bin/` with `.venv/Scripts/` and run terminals separately.
+Requirements: Python 3.12+, Node.js 24.15.0 or newer in the 24.x series, npm; Docker for the preferred PostgreSQL path. Commands below run from the repository root. For native Windows PowerShell, follow [WINDOWS_SETUP.md](docs/WINDOWS_SETUP.md), including recovery after interrupted downloads. On macOS/Linux, use the commands below.
 
 ```bash
 cp .env.example .env

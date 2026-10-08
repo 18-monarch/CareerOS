@@ -11,7 +11,7 @@ git remote add origin https://github.com/YOUR_ACCOUNT/CareerOS.git
 git push -u origin main
 ```
 
-Preserve the included Git history. Do not upload `.env`, databases, virtual environments or `node_modules`. The zip excludes these. Configure repository branch protection to require all three CI jobs after they have run once.
+Preserve the included Git history. Do not upload `.env`, databases, virtual environments or `node_modules`. The zip excludes these. Configure repository branch protection to require all four CI jobs after they have run once.
 
 ## 2. Neon
 

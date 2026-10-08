@@ -10,7 +10,7 @@ Next.js presents the workspace and proxies same-origin requests to FastAPI. SQLA
 
 ## How to run locally
 
-Use Python 3.12+, Node 24 and PostgreSQL through Docker, or the documented SQLite development fallback. From the repository root:
+Use Python 3.12+, Node 24.15+ and PostgreSQL through Docker, or the documented SQLite development fallback. From the repository root:
 
 ```bash
 cp .env.example .env

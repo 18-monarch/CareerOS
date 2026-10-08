@@ -48,3 +48,9 @@ Source fixtures are deterministic and offline. Live checks are reported separate
 ## What passing tests do not establish
 
 A production build is not proof of deployment. SQLite is not proof of native PostgreSQL concurrency. Embedded PostgreSQL validates SQL/type behavior but not multi-session advisory locking. Screenshots do not prove every possible mobile dialog fits. No test predicts hiring outcomes or legal eligibility.
+
+## Windows installation regression
+
+The requirements files are generated with `uv pip compile --universal`; retain platform markers when regenerating them. Windows must skip `uvloop` and include `tzdata` (plus `colorama` for development). `test_portability.py` checks both dependency sets and exercises lock contention in a separate Python process, including release after an exception. Local SQLite locks use `msvcrt` on Windows and `fcntl` on Unix.
+
+The `windows-local` CI job installs the actual requirements on Windows, checks dependencies, runs the backend suite, migrates/seeds SQLite, runs the worker, and builds/tests the frontend. This job requires a pushed GitHub repository before it can execute. Local Linux results do not establish native Windows runtime correctness.
