@@ -309,7 +309,7 @@ def test_ready_rejects_outdated_schema(db, client):
     try:
         with patch.object(main, "engine", db.bind):
             assert client.get("/ready").status_code == 503
-            db.execute(text("UPDATE alembic_version SET version_num = 'c61f03'"))
+            db.execute(text("UPDATE alembic_version SET version_num = 'd82f04'"))
             db.commit()
             assert client.get("/ready").status_code == 200
     finally:

@@ -16,6 +16,7 @@ import {
   StateBadge,
   Empty,
 } from "./ui";
+import DiscoveryPanel from "./discovery";
 export default function Sources() {
   const [editing, setEditing] = useState<Source | null>(null);
   const client = useQueryClient(),
@@ -29,6 +30,7 @@ export default function Sources() {
       <Heading title="Sources you can trust" eyebrow="INGESTION & HEALTH">
         Connect public company boards. A failed source won’t stop the rest.
       </Heading>
+      <DiscoveryPanel />
       {editing && (
         <Modal title="Edit source" onClose={() => setEditing(null)}>
           <SourceForm source={editing} onSaved={() => setEditing(null)} />
@@ -73,8 +75,9 @@ export default function Sources() {
                           {s.latest.fetched} fetched · {s.latest.added} added
                         </span>
                         <small>
-                          {s.latest.updated} updated · {s.latest.closed || 0}{" "}
-                          closed · {s.latest.parse_errors} errors · avg{" "}
+                          {s.latest.updated} updated · {s.latest.skipped || 0}{" "}
+                          filtered · {s.latest.closed || 0} closed ·{" "}
+                          {s.latest.parse_errors} errors · avg{" "}
                           {s.average_runtime_ms}ms
                         </small>
                       </>

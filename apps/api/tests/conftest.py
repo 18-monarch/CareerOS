@@ -1,4 +1,7 @@
+# ruff: noqa: E402
 import os
+
+os.environ["AUTO_DISCOVERY_ENABLED"] = "false"
 
 import pytest
 from careeros.db import Base, build_engine, get_db

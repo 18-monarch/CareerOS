@@ -1930,6 +1930,81 @@
         }
       }
     },
+    "/discovery": {
+      "get": {
+        "tags": [
+          "Sources and processing"
+        ],
+        "summary": "Discovery Status",
+        "operationId": "discovery_status_discovery_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Sources and processing"
+        ],
+        "summary": "Discovery Preference",
+        "operationId": "discovery_preference_discovery_put",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DiscoveryPreference"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/discovery/refresh": {
+      "post": {
+        "tags": [
+          "Sources and processing"
+        ],
+        "summary": "Discovery Refresh",
+        "operationId": "discovery_refresh_discovery_refresh_post",
+        "responses": {
+          "202": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
     "/sources/health": {
       "get": {
         "tags": [
@@ -2315,6 +2390,20 @@
           "problem"
         ],
         "title": "DSALogIn"
+      },
+      "DiscoveryPreference": {
+        "properties": {
+          "enabled": {
+            "type": "boolean",
+            "title": "Enabled"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "enabled"
+        ],
+        "title": "DiscoveryPreference"
       },
       "HTTPValidationError": {
         "properties": {

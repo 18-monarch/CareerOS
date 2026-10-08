@@ -77,7 +77,7 @@ All schedules in `render.yaml` use UTC:
 | Daily | `30 2 * * *` | 08:00 IST | deadline alerts, digest |
 | Weekly | `30 2 * * 1` | Monday 08:00 IST | weekly summary |
 
-The scheduler must be deployed separately; merely running the API does not start cron. All cron services use the same environment group and direct database endpoint. Advisory locks skip duplicate runs. Alert unique keys make repeated invocations safe.
+Automatic discovery also runs inside the API by default. For a cron-only deployment, set `AUTO_DISCOVERY_ENABLED=false` and schedule `python -m worker discover-jobs` hourly; persisted due times enforce the six-hour user cadence. Do not confuse the separate cron services below with the API background thread. All cron services use the same environment group and direct database endpoint. Advisory locks skip duplicate runs. Alert unique keys make repeated invocations safe.
 
 Connect actual source boards in the UI. Demo jobs are not a source of live opportunities. `refresh-jobs` is the same fetch/update pipeline as ingestion and is useful for a separately scheduled refresh cadence if desired.
 
@@ -104,4 +104,4 @@ Official feeds: set `ALLOWED_FEED_HOSTS` to trusted domains. This is a permissio
 
 JSON logs contain request IDs, route, status, latency, source ID and error class. They omit bodies, credentials and tokens. Record run counts via source health. Monitor `/ready` externally. Keep logs/retention appropriate for a personal app.
 
-Rollback frontend/backend code via platform deployments only after checking database compatibility. Database migrations are a separate concern. Take a Neon backup/branch before destructive changes. The three migrations (current head `c61f03`) add tables, immutable-history triggers and source-reconciliation columns; review their explicit downgrade paths. `/ready` requires the exact head shipped with the API. Update that expected revision alongside future migrations.
+Rollback frontend/backend code via platform deployments only after checking database compatibility. Database migrations are a separate concern. Take a Neon backup/branch before destructive changes. The four migrations (current head `d82f04`) add tables, immutable-history triggers and source-reconciliation columns; review their explicit downgrade paths. `/ready` requires the exact head shipped with the API. Update that expected revision alongside future migrations.

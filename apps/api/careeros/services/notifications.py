@@ -157,6 +157,17 @@ def generate(db, user, kind):
         new_applications = sum(
             a.applied_at is not None and start <= a.applied_at <= now for a in applications
         )
+        shortlist = sorted(actionable, key=lambda job: job["is_demo"])[:5]
+        opportunities = (
+            "\n".join(
+                f"- {'[Demo] ' if job['is_demo'] else ''}{job['company_name']} — {job['title']} "
+                f"({job['country']}): {job['match']['score']}% match; "
+                f"{job['match']['eligibility']['state']}. "
+                f"{job.get('application_url') or job.get('source_url') or 'Open CareerOS for details.'}"
+                for job in shortlist
+            )
+            or "No actionable opportunities recorded yet."
+        )
         actions = []
         for application in applications:
             if application.status in ("REJECTED", "WITHDRAWN", "EXPIRED", "OFFER"):
@@ -180,6 +191,7 @@ def generate(db, user, kind):
             f"{new_applications} applications submitted {period_label}.\n"
             f"All-time funnel ({metrics['sample_size']} applications): {metrics['recommendation']}\n"
             f"Learning priorities: {', '.join(g['skill'] for g in gaps) or 'No missing skills in relevant postings yet'}.\n"
+            f"Opportunities to review (check original requirements):\n{opportunities}\n"
             "Deadlines in the next 7 days:\n"
             + (
                 "\n".join(

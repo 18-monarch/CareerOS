@@ -1,6 +1,6 @@
 from functools import lru_cache
 
-from pydantic import model_validator
+from pydantic import Field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -17,6 +17,8 @@ class Settings(BaseSettings):
     ai_base_url: str = "https://api.openai.com/v1"
     ai_api_key: str = ""
     ai_model: str = ""
+    auto_discovery_enabled: bool = True
+    discovery_interval_hours: int = Field(default=6, ge=1, le=168)
 
     @model_validator(mode="after")
     def production_safety(self):

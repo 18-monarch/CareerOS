@@ -54,3 +54,13 @@ A production build is not proof of deployment. SQLite is not proof of native Pos
 The requirements files are generated with `uv pip compile --universal`; retain platform markers when regenerating them. Windows must skip `uvloop` and include `tzdata` (plus `colorama` for development). `test_portability.py` checks both dependency sets and exercises lock contention in a separate Python process, including release after an exception. Local SQLite locks use `msvcrt` on Windows and `fcntl` on Unix.
 
 The `windows-local` CI job installs the actual requirements on Windows, checks dependencies, runs the backend suite, migrates/seeds SQLite, runs the worker, and builds/tests the frontend. This job requires a pushed GitHub repository before it can execute. Local Linux results do not establish native Windows runtime correctness.
+
+## Automatic discovery
+
+`test_discovery.py` exercises first-run bootstrap, relevance filtering, delayed schedules, repeat checks/deduplication, source failures, pause/resume, disabled/existing source preservation, process locks, crash recovery and per-user status isolation. Standard browser tests disable background discovery to keep their existing fixtures deterministic. Run the additional real background-thread/browser journey with:
+
+```bash
+E2E_AUTODISCOVERY=true scripts/verify-browser.sh discovery.spec.ts
+```
+
+The test creates an account and waits for jobs without connecting any source or clicking an import button, checks filtered records, then pauses/reloads/resumes and verifies repeat ingestion adds no duplicates. Only external feed HTTP is mocked. `discover-jobs` can separately check live boards in a disposable database.

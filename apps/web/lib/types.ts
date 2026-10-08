@@ -163,6 +163,7 @@ export interface Source {
     added: number;
     updated: number;
     closed: number;
+    skipped?: number;
     parse_errors: number;
     error: string | null;
     created_at: string;

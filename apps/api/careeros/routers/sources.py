@@ -3,8 +3,9 @@ import asyncio
 from careeros.db import get_db
 from careeros.models import AuditLog, Occurrence, Source, User
 from careeros.routers.profile import owned
-from careeros.schemas import SourceIn
+from careeros.schemas import Schema, SourceIn
 from careeros.security import current_user, job_writer, rate_limit
+from careeros.services.discovery import ensure_state, status_data, wake_scheduler
 from careeros.services.ingestion import health_summary, ingest_source
 from careeros.services.locking import job_lock
 from careeros.services.notifications import generate
@@ -13,6 +14,40 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 router = APIRouter(tags=["Sources and processing"])
+
+
+class DiscoveryPreference(Schema):
+    enabled: bool
+
+
+@router.get("/discovery")
+def discovery_status(user: User = Depends(current_user), db: Session = Depends(get_db)):
+    return status_data(ensure_state(db, user.id))
+
+
+@router.put("/discovery")
+def discovery_preference(
+    body: DiscoveryPreference, user: User = Depends(current_user), db: Session = Depends(get_db)
+):
+    state = ensure_state(db, user.id)
+    state.enabled = body.enabled
+    if body.enabled:
+        state.next_run = None
+    db.commit()
+    wake_scheduler()
+    return status_data(state)
+
+
+@router.post("/discovery/refresh", status_code=202)
+def discovery_refresh(user: User = Depends(current_user), db: Session = Depends(get_db)):
+    rate_limit(db, f"discovery:{user.id}", 6, 3600)
+    state = ensure_state(db, user.id)
+    if not state.enabled:
+        raise HTTPException(409, "Resume automatic discovery before requesting a check")
+    state.next_run = None
+    db.commit()
+    wake_scheduler()
+    return {"status": "QUEUED"}
 
 
 @router.get("/sources")
@@ -51,7 +86,7 @@ def edit_source(
             "This source already has imported records. Add a new source to change its board, feed URL or adapter; existing provenance is retained.",
         )
     row.name, row.kind, row.enabled = body.name, body.kind, body.enabled
-    row.config = body.model_dump(exclude={"name", "kind", "enabled"})
+    row.config = {**row.config, **body.model_dump(exclude={"name", "kind", "enabled"})}
     db.add(AuditLog(user_id=user.id, action="source.updated", target_id=row.id))
     db.commit()
     return {"id": row.id, **body.model_dump()}

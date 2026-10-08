@@ -8,6 +8,7 @@ import { Dashboard as DashboardData, Job } from "@/lib/types";
 import { Heading, Loading, ErrorBox, Empty, useAction, Feedback } from "./ui";
 import JobCard from "./job-card";
 import JobDetail from "./job-detail";
+import DiscoveryPanel from "./discovery";
 export default function Dashboard({ name }: { name: string }) {
   const client = useQueryClient(),
     action = useAction();
@@ -35,6 +36,7 @@ export default function Dashboard({ name }: { name: string }) {
       >
         A little focus today. More options tomorrow.
       </Heading>
+      <DiscoveryPanel compact />
       <ErrorBox error={error} />
       {isPending ? (
         <Loading />

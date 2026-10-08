@@ -111,6 +111,18 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: always()
         with:
+          name: browser-workflows
+          path: apps/web/test-results
+      - name: Verify automatic background discovery
+        env:
+          PYTHON_BIN: python
+          E2E_DATABASE_URL: postgresql+psycopg://careeros:test_only@localhost:5432/careeros_browser
+          E2E_AUTODISCOVERY: "true"
+          DEMO_PASSWORD: CareerOS-local-demo-2026
+        run: scripts/verify-browser.sh discovery.spec.ts
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
           name: browser-verification
           path: |
             apps/web/playwright-report

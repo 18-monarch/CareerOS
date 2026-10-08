@@ -23,6 +23,7 @@ COMMANDS = [
     "send-deadline-alerts",
     "weekly-summary",
     "run-cycle",
+    "discover-jobs",
 ]
 
 
@@ -30,6 +31,10 @@ async def run(command):
     with job_lock(engine, command) as acquired:
         if not acquired:
             return {"status": "skipped", "reason": "another execution holds the lock"}
+        if command == "discover-jobs":
+            from careeros.services.discovery import run_due
+
+            return {"command": command, **await run_due()}
         if command == "run-cycle":
             stages = []
             for stage in (

@@ -258,9 +258,22 @@ class SourceRun(Entity, Base):
     added: Mapped[int] = mapped_column(Integer, default=0)
     updated: Mapped[int] = mapped_column(Integer, default=0)
     closed: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
+    skipped: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
     parse_errors: Mapped[int] = mapped_column(Integer, default=0)
     runtime_ms: Mapped[int] = mapped_column(Integer, default=0)
     error: Mapped[str | None] = mapped_column(String(200))
+
+
+class DiscoveryState(Entity, Base):
+    __tablename__ = "discovery_state"
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), unique=True)
+    enabled: Mapped[bool] = mapped_column(Boolean, default=True)
+    status: Mapped[str] = mapped_column(String(20), default="PENDING")
+    last_started: Mapped[datetime | None] = mapped_column(DateTime)
+    last_finished: Mapped[datetime | None] = mapped_column(DateTime)
+    next_run: Mapped[datetime | None] = mapped_column(DateTime)
+    summary: Mapped[dict] = mapped_column(JSON, default=dict)
+    error: Mapped[str | None] = mapped_column(String(240))
 
 
 class MarketReport(Entity, Base):

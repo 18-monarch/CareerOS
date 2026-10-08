@@ -47,3 +47,9 @@ A per-user writer lock shared by ingestion and manual job/source mutation protec
 ## Scaling boundary
 
 Avoid N+1 reads with joined/select-in relationships; the user-facing search still computes all matches in memory. Complexity is approximately O(J × (S + P)) for J jobs, S candidate/job skill inputs and P project evidence, plus O(J log J) sorting. This is a deliberate personal-scale trade-off. At larger volume, filter coarse SQL candidates first, use persisted versioned match results and cursor pagination. Do not add distributed caches before measuring.
+
+## Automatic discovery
+
+The API lifespan starts one bounded background thread when `AUTO_DISCOVERY_ENABLED=true`. It polls persisted per-user schedules every 30 seconds, immediately scans due users, and uses the same domain/import services as `worker discover-jobs`. Per-user advisory/file locks prevent duplicate checks across processes. Successful checks schedule six hours later; failures retry in one hour. Sources are bootstrapped idempotently; existing source settings and disabled sources are preserved. Source fetches finish before a SQLite write transaction begins, keeping slow internet requests from blocking local mutations.
+
+A curated catalog provides public board identities; it does not run a search engine or guess arbitrary URLs. Technical early-career filters apply only to automatically added sources. HTTP limits, provenance, deduplication and source-health evidence remain in the existing pipeline. Discovery owns its own table, so editing profile preferences cannot reset its schedule or pause state.

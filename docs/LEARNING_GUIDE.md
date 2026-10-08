@@ -209,3 +209,11 @@ Read `test_reliability.py`, `test_migrations.py` and `tests/e2e/ingestion.spec.t
 **Test the whole user action.** The third browser journey starts with a failed source, edits it, ingests two occurrences into one job, confirms uncertain facts, archives/reimports/restores, records an application, edits resume metadata and changes credentials. Only the remote feed is replaced. This catches route/form/cache/integration failures that isolated mocks miss.
 
 **Practice:** Run `scripts/verify-browser.sh`, read one failure trace, then run `python -m worker run-cycle` twice against a disposable database. Explain why duplicate notifications are prevented and why a failed ingestion stage should not suppress all deadline alerts. Never point destructive test fixtures at personal or production data.
+
+## 12. Turning a manual importer into an automatic service
+
+Read `services/discovery.py` and `test_discovery.py`. Automatic discovery adds an execution trigger and persisted scheduling state around the existing importer instead of duplicating it. An API lifespan starts a background thread, keeping blocking database operations away from the HTTP event loop. A per-user lock ensures two API processes or a CLI worker cannot run the same discovery simultaneously.
+
+The database records next-run time, pause state and last results. Restarting the app does not forget a pause or run early; an interrupted due run can be retried once the old process releases its OS/database lock. Source bootstrapping checks existing board identity and preserves disabled sources. Internet failures become visible partial status with a shorter retry interval, while valid imports survive.
+
+The catalog is an explicit coverage boundary. A scheduled importer with six known feeds is not a general search engine. The filter only admits clearly technical early-career titles; the eligibility engine still handles missing and unconfirmed requirements conservatively. Live source checks confirm actual payload compatibility, and a browser test proves that a user receives jobs without first configuring a source.

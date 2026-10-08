@@ -14,7 +14,17 @@ if os.environ.get("CAREEROS_E2E") != "1" or os.environ.get("ENVIRONMENT") != "de
 
 from careeros.db import utcnow  # noqa: E402
 from careeros.main import app  # noqa: F401, E402
-from careeros.services import sources  # noqa: E402
+from careeros.services import discovery, sources  # noqa: E402
+
+if os.environ.get("E2E_AUTODISCOVERY") == "true":
+    discovery.CATALOG = (
+        {
+            "kind": "greenhouse",
+            "board": "careeros-fixture",
+            "company_name": "Fixture Company",
+            "url": "https://example.com/fixture-careers",
+        },
+    )
 
 real_fetch = sources.fetch_json
 real_normalize = sources.Greenhouse.normalize_job
@@ -31,7 +41,13 @@ def upstream(request):
             "location": {"name": "Ahmedabad"},
             "application_deadline": (utcnow() + timedelta(days=2)).isoformat(),
         }
-        return httpx.Response(200, json={"jobs": [job, {**job, "id": "fixture-2"}]})
+        records = [job, {**job, "id": "fixture-2"}]
+        if os.environ.get("E2E_AUTODISCOVERY") == "true":
+            records += [
+                {**job, "id": "senior", "title": "Senior Software Engineer"},
+                {**job, "id": "hr", "title": "HR Intern"},
+            ]
+        return httpx.Response(200, json={"jobs": records})
     return httpx.Response(404, json={"error": "No fixture board found"})
 
 

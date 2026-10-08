@@ -10,6 +10,7 @@ export E2E_BASE_URL="$FRONTEND_ORIGIN"
 # E2E_DATABASE_URL, if set, must be a separate disposable database.
 export DATABASE_URL="${E2E_DATABASE_URL:-sqlite:///$qa_dir/e2e.db}"
 export ENVIRONMENT=development COOKIE_SECURE=false REGISTRATION_ENABLED=true
+export AUTO_DISCOVERY_ENABLED="${E2E_AUTODISCOVERY:-false}"
 export RESEND_API_KEY= AI_API_KEY= CAREEROS_E2E=1 E2E_FIXTURE_FEED=1
 export DEMO_PASSWORD="${DEMO_PASSWORD:-CareerOS-local-demo-2026}"
 "$python_bin" -m alembic upgrade head
@@ -39,4 +40,4 @@ for url in [os.environ['API_BASE_URL']+'/ready', os.environ['FRONTEND_ORIGIN']]:
 print('Real API, migrated database and production frontend ready; external feed uses fixtures')
 PY
 cd apps/web
-npm run test:e2e
+npm run test:e2e -- "$@"

@@ -1,5 +1,6 @@
 import time
 import uuid
+from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.exceptions import RequestValidationError
@@ -16,7 +17,24 @@ from careeros.routers import applications, auth, insights, jobs, profile, source
 
 logger = configure_logging()
 
+
+@asynccontextmanager
+async def lifespan(app):
+    from careeros.services import discovery
+
+    if get_settings().auto_discovery_enabled:
+        discovery.scheduler = discovery.DiscoveryScheduler()
+        discovery.scheduler.start()
+    try:
+        yield
+    finally:
+        if discovery.scheduler:
+            discovery.scheduler.close()
+            discovery.scheduler = None
+
+
 app = FastAPI(
+    lifespan=lifespan,
     title="CareerOS API",
     version="1.0.0",
     description="Private career profiles, evidence-based eligibility and opportunity tracking. Cookie auth; mutations require X-CSRF-Token.",
@@ -136,7 +154,7 @@ def ready():
         with engine.connect() as connection:
             revision = connection.scalar(text("SELECT version_num FROM alembic_version"))
             connection.execute(text("SELECT 1 FROM users LIMIT 1"))
-        if revision != "c61f03":
+        if revision != "d82f04":
             return JSONResponse(
                 {
                     "status": "not_ready",

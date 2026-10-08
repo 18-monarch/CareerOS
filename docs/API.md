@@ -25,6 +25,7 @@ All endpoints below except health and initial authentication require the access 
 | `/dashboard` | GET action-oriented aggregate |
 | `/learning/recommendations`, `/learning/progress` | GET skill gaps / GET and PUT personal progress |
 | `/dsa`, `/dsa/{id}` | GET topic totals + logs / POST log / DELETE log |
+| `/discovery`, `/discovery/refresh` | GET current user schedule/status/coverage; PUT enabled preference; POST queue a check (202) |
 | `/sources`, `/sources/health` | GET private source health / POST source |
 | `/sources/{id}` | PUT configuration; imported source identity cannot be changed |
 | `/sources/{id}/toggle`, `/sources/{id}/ingest` | PATCH enabled flag / POST bounded ingestion |

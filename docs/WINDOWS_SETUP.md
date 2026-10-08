@@ -71,7 +71,7 @@ cd apps/web
 npm.cmd run dev
 ```
 
-Open http://localhost:3000. Register your account, complete My profile, then add one real opportunity or configure a source and choose Run now. Keep both terminals open. Ctrl+C stops each server; restart later with these same two commands. Keep the frontend on port 3000 because the local origin settings expect that port.
+Open http://localhost:3000. Register your account and complete My profile. Automatic discovery connects the starter sources and checks for real technical internships within about 30 seconds; results appear in Opportunities. Check progress in Sources. Keep both terminals open. Ctrl+C stops each server; restart later with these same two commands. Keep the frontend on port 3000 because the local origin settings expect that port.
 
 Optional demo account, in a third terminal at the project root (choose your own password):
 
@@ -82,13 +82,13 @@ $env:DEMO_PASSWORD = 'Choose-your-own-long-password'
 
 The demo contains fictional jobs. There is no default login password.
 
-To refresh configured sources, matches, expiry and reminders:
+Optional manual worker command (Sources → Check now is normally enough):
 
 ```powershell
-.\.venv\Scripts\python.exe -m worker run-cycle
+.\.venv\Scripts\python.exe -m worker discover-jobs
 ```
 
-The API does not run this schedule automatically. Notifications work in-app without email credentials. Stop servers/workers before backing up `careeros.db`.
+The API now checks sources automatically every six hours while it runs. Pause/resume from Sources. Notifications work in-app without email credentials. Stop servers/workers before backing up `careeros.db`.
 
 ## Verification boundary
 

@@ -2,6 +2,7 @@ import logging
 import time
 
 from careeros.models import Job, Occurrence, SourceRun
+from careeros.services.discovery_catalog import early_career, enrich_location
 from careeros.services.locking import job_lock
 from careeros.services.repository import identity, upsert_job
 from careeros.services.sources import ADAPTERS
@@ -52,20 +53,30 @@ async def ingest_source(db, source):
             updated=0,
             parse_errors=0,
             closed=0,
+            skipped=0,
         )
-        db.add(run)
-        db.flush()
         try:
             adapter = ADAPTERS[source.kind](source.config)
             records = await adapter.fetch_jobs()
             if not isinstance(records, list):
                 raise ValueError("Source response must contain a job list")
             run.fetched = len(records)
+            # Do not hold SQLite's write lock during slow internet requests.
+            db.add(run)
+            db.flush()
             seen = set()
             for raw in records:
                 try:
                     with db.begin_nested():
                         normalized = adapter.normalize_job(raw)
+                        seen.add(
+                            normalized.external_id or identity(normalized.model_dump(mode="json"))
+                        )
+                        if source.config.get("discovery_managed"):
+                            if not early_career(normalized):
+                                run.skipped += 1
+                                continue
+                            normalized = enrich_location(normalized)
                         _, created = upsert_job(db, source.user_id, normalized, source, raw)
                     seen.add(normalized.external_id or identity(normalized.model_dump(mode="json")))
                     run.added += int(created)
@@ -87,6 +98,7 @@ async def ingest_source(db, source):
                 "ingestion_failed", extra={"source_id": source.id, "error_type": type(exc).__name__}
             )
         run.runtime_ms = round((time.monotonic() - start) * 1000)
+        db.add(run)
         db.commit()
         logger.info(
             "ingestion_complete",
@@ -106,6 +118,7 @@ async def ingest_source(db, source):
                 "added",
                 "updated",
                 "closed",
+                "skipped",
                 "parse_errors",
                 "runtime_ms",
                 "error",
@@ -157,6 +170,7 @@ def health_summary(db, sources):
                         "added",
                         "updated",
                         "closed",
+                        "skipped",
                         "parse_errors",
                         "runtime_ms",
                         "error",

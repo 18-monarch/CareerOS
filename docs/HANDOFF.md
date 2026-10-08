@@ -2,7 +2,7 @@
 
 ## What was built
 
-A functional personal career workspace: editable candidate profile; Greenhouse, Lever, Ashby and approved JSON-feed ingestion; manual/campus jobs; canonical deduplication; deterministic eligibility and matching; application tracking with immutable history; learning priorities; DSA/project mastery; notifications; source health; sourced market and international-rule notes. This continuation adds editable sources/resumes, conservative missing-posting closure, persistent archive/restore, password changes/operator recovery, seven-day summaries, safe provider retries and a resilient scheduled cycle. Includes responsive dark/light frontend, REST backend, workers, migrations, explicit demo seed, tests, CI, deployment configuration and study documentation.
+A functional personal career workspace with automatic public-board discovery while the backend runs: editable candidate profile; Greenhouse, Lever, Ashby and approved JSON-feed ingestion; manual/campus jobs; canonical deduplication; deterministic eligibility and matching; application tracking with immutable history; learning priorities; DSA/project mastery; notifications; source health; sourced market and international-rule notes. This continuation adds editable sources/resumes, conservative missing-posting closure, persistent archive/restore, password changes/operator recovery, seven-day summaries, safe provider retries and a resilient scheduled cycle. Includes responsive dark/light frontend, REST backend, workers, migrations, explicit demo seed, tests, CI, deployment configuration and study documentation.
 
 ## Architecture
 
@@ -35,7 +35,7 @@ Create Neon PostgreSQL and use its direct connection endpoint. Apply the Render 
 
 ## Test results
 
-58 backend tests, 5 frontend component tests and 3 Chromium E2E tests passed. Lint, formatting, TypeScript and production build passed. Migrations, all eight worker commands, navigation and mobile layout were exercised. Live Greenhouse ingestion and Ashby normalization were verified. Current migrations, seed, downgrade/upgrade, schema drift and immutable-history triggers passed using embedded PostgreSQL; native multi-session PostgreSQL concurrency remains a deployment/CI gate. Read VERIFICATION.md for evidence and precise exclusions.
+68 backend tests, 5 frontend component tests and 4 Chromium E2E workflows passed. Lint, formatting, TypeScript and production build passed. Migrations, the original eight worker commands plus the new live-tested automatic discovery command, navigation and mobile layout were exercised. Live Greenhouse ingestion and Ashby normalization were verified. Current migrations, seed, downgrade/upgrade, schema drift and immutable-history triggers passed using embedded PostgreSQL; native multi-session PostgreSQL concurrency remains a deployment/CI gate. Read VERIFICATION.md for evidence and precise exclusions.
 
 ## Known limitations
 

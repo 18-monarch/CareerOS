@@ -1,6 +1,14 @@
 # Engineering verification report
 
-Verification date: 6 October 2026. This report distinguishes executed checks from supplied configuration. No cloud deployment is claimed.
+Last updated: 8 October 2026. This report distinguishes executed checks from supplied configuration. No cloud deployment is claimed.
+
+## Automatic discovery — 8 October 2026
+
+Implemented API-started background checks, persisted per-user schedule/pause state, starter-source bootstrap, technical early-career filtering, visible controls/status and richer opportunity digests. Migration head is now `d82f04`; all four migrations and schema drift checks passed on SQLite. The new migration has not yet been executed on native PostgreSQL.
+
+Executed for this update: **68 backend tests**, **5 component tests**, lint/type checks, a fresh production build and **4 Chromium browser workflows** passed. The added journey registers an empty account, receives imported jobs without configuring a source or triggering a scan, pauses/reloads/resumes, and confirms repeat import creates no duplicates. It uses the actual background thread/API/database/frontend with only the external feed transport mocked. Mobile screenshots use reduced motion to avoid capturing the responsive sidebar mid-transition.
+
+A separate real internet run checked all six catalog feeds: **103 postings fetched, 96 filtered out, 7 technical internships imported, zero errors**. Five imported roles were located in India, two in the US; a repeat scan added zero. No promise of 2028 eligibility is inferred from these counts. Current native Windows/PostgreSQL execution and remote CI remain unverified.
 
 ## Windows installation fix — 8 October 2026
 
@@ -8,7 +16,7 @@ The user's Windows log exposed unconditional `uvloop` installation plus download
 
 Executed for this fix: clean Python dependency installation/check, **61 backend tests passed**, **5 frontend component tests passed**, lint/type checks and a fresh production build. New regression coverage checks Windows dependency selection and actual inter-process lock contention/release. Native Windows execution is **not claimed**: the new `windows-local` CI job is configured but has not run remotely. Earlier browser and PostgreSQL evidence below is from October 6, not a Windows test.
 
-## Current release: executed and passed
+## October 6 baseline: executed and passed
 
 | Check | Result / evidence |
 |---|---|
