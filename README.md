@@ -1,5 +1,7 @@
 # CareerOS
 
+**Deploy online:** open [DEPLOY-MANUALLY.md](DEPLOY-MANUALLY.md) for the complete Netlify + Render + Neon walkthrough.
+
 **October 9 release:** begin with [START-HERE.md](START-HERE.md). Windows users can run `RUN-WINDOWS.cmd`. For hosting, use the tested deployment configuration in [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) for Netlify + Render + Neon; no live deployment has been created yet. This update adds category research, product design, PDF application packets and an optional local Lever runner.
 
 Personalized Internship, Job, Learning & Career Intelligence System.

@@ -1,6 +1,6 @@
 # Deploy CareerOS: Netlify + Render + Neon
 
-The repository is prepared for this stack. **It is not yet deployed.** There is no CareerOS Git remote in this checkout or accessible CareerOS repository in the connected GitHub installation. No cloud service or database was created in this preparation step. Netlify currently presents a sign-in screen in the available deployment browser.
+Start with [DEPLOY-MANUALLY.md](../DEPLOY-MANUALLY.md) for the complete Windows-friendly walkthrough. The files are prepared and tested locally; no cloud services have been created by this delivery.
 
 ## 1. Repository and cost
 
@@ -81,13 +81,13 @@ Free Render services may take about a minute to wake. The Netlify gateway return
 
 ## 6. Create your private account
 
-Registration stays disabled. In a terminal with the CareerOS Python environment, set `DATABASE_URL` to your direct Neon URL for this session, then run:
+Registration stays disabled. After the Render API has migrated the Neon database, run this from your installed CareerOS environment:
 
 ```powershell
-.\.venv\Scripts\python.exe -m careeros.manage create-user --email YOUR_EMAIL --name "Mohit"
+.\.venv\Scripts\python.exe -m careeros.cloud_account
 ```
 
-The password is entered twice at hidden prompts. This creates an empty account with no demo jobs. Do not put the password in a command, Git or chat. A paid Render shell can run the same command. Avoid leaving the production database URL in your normal local `.env`; restore your local configuration after the operation.
+The helper prompts for the direct TLS database URL and password without echoing them, validates the schema, and creates an empty account. It does not edit local environment files or overwrite an existing account. The root manual guide includes dependency setup. Trusted operators can still use `careeros.manage` for password recovery with the intended database configured.
 
 Sign in through the Netlify URL. Complete your real education, work authorization, categories, skills, projects, portfolio and resume. The first worker run will connect starter sources automatically.
 

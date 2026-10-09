@@ -109,3 +109,9 @@ These checks were executed earlier on 6 October 2026 and were not repeated after
 ## Deployment boundary
 
 The application has been implemented, built and tested locally. To complete hosted delivery: connect the intended GitHub repository, confirm the Render workspace, configure Neon and deployment secrets, run native PostgreSQL/container CI, deploy and execute `DEPLOYMENT.md` smoke checks. Registration can stay closed: create the personal account with the secure operator CLI. Missing source facts remain review items; scores and learning-hour estimates remain transparent heuristics.
+
+## Manual deployment handoff
+
+The root manual guide provides provider settings, Windows commands, onboarding and troubleshooting. The new `careeros.cloud_account` command targets the supplied direct TLS PostgreSQL URL, requires the current schema, creates no demo jobs, and refuses to overwrite existing accounts. Its additional regression test verifies these account/data boundaries. No cloud service or real user account was created during verification.
+
+Final manual-release check: **88 backend tests, 8 frontend tests, lint/type/format checks and the production build passed**. The additional cloud account command was tested on a migrated disposable database, including duplicate-account preservation and URL/schema guards. Real Neon account creation was not performed.

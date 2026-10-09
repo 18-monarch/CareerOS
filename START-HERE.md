@@ -1,5 +1,7 @@
 # CareerOS — start here
 
+**Deploy online:** open [DEPLOY-MANUALLY.md](DEPLOY-MANUALLY.md) for the complete Netlify + Render + Neon walkthrough.
+
 This October 9 update adds category-based internship research, product design, real PDF attachments, an application desk, a local Lever browser runner, and safer upgrades. Your existing career tracker, learning tools and accounts are retained.
 
 For cloud hosting on **Netlify + Render + Neon**, follow [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md). The cloud configuration is prepared; creating the Git repository and deploying the services are still pending.
