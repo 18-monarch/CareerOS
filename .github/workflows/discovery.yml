@@ -1,0 +1,45 @@
+name: CareerOS scheduled discovery
+
+on:
+  schedule:
+    - cron: "17 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: careeros-production-discovery
+  cancel-in-progress: false
+
+jobs:
+  discover:
+    # Enable only after the cloud account and secrets have been configured.
+    if: vars.CAREEROS_DISCOVERY_ENABLED == 'true' && github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install locked dependencies
+        run: pip install -r requirements.lock && pip install --no-deps .
+      - name: Process due internship checks
+        env:
+          DATABASE_URL: ${{ secrets.CAREEROS_DATABASE_URL }}
+          FRONTEND_ORIGIN: ${{ vars.FRONTEND_ORIGIN }}
+          ENVIRONMENT: production
+          COOKIE_SECURE: "true"
+          REGISTRATION_ENABLED: "false"
+          AUTO_MIGRATE_LOCAL: "false"
+          AUTO_DISCOVERY_ENABLED: "false"
+          EXTERNAL_DISCOVERY_ENABLED: "true"
+          DISCOVERY_INTERVAL_HOURS: "6"
+          DISCOVERY_WORKER_INTERVAL_MINUTES: "60"
+          BRAVE_SEARCH_API_KEY: ${{ secrets.BRAVE_SEARCH_API_KEY }}
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          EMAIL_FROM: ${{ vars.EMAIL_FROM }}
+        run: python scripts/run-hosted-discovery.py

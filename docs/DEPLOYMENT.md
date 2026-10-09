@@ -1,5 +1,7 @@
 # Deploy CareerOS: Netlify + Render + Neon
 
+**Free discovery option:** follow [DEPLOY-FREE.md](../DEPLOY-FREE.md) to run discovery in GitHub Actions with a manually created Free Render API. The Blueprint instructions below include an optional paid Render cron.
+
 Start with [DEPLOY-MANUALLY.md](../DEPLOY-MANUALLY.md) for the complete Windows-friendly walkthrough. The files are prepared and tested locally; no cloud services have been created by this delivery.
 
 ## 1. Repository and cost
