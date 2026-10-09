@@ -53,3 +53,11 @@ Avoid N+1 reads with joined/select-in relationships; the user-facing search stil
 The API lifespan starts one bounded background thread when `AUTO_DISCOVERY_ENABLED=true`. It polls persisted per-user schedules every 30 seconds, immediately scans due users, and uses the same domain/import services as `worker discover-jobs`. Per-user advisory/file locks prevent duplicate checks across processes. Successful checks schedule six hours later; failures retry in one hour. Sources are bootstrapped idempotently; existing source settings and disabled sources are preserved. Source fetches finish before a SQLite write transaction begins, keeping slow internet requests from blocking local mutations.
 
 A curated catalog provides public board identities; it does not run a search engine or guess arbitrary URLs. Technical early-career filters apply only to automatically added sources. HTTP limits, provenance, deduplication and source-health evidence remain in the existing pipeline. Discovery owns its own table, so editing profile preferences cannot reset its schedule or pause state.
+
+## Research and application pipeline (October 9)
+
+Discovery imports ten public boards, optionally runs bounded Brave category/country searches, rechecks imported research leads, ranks jobs, prepares enabled drafts and generates meaningful-change alerts. Search text is never treated as verified listing evidence. Only recognized ATS endpoints are fetched automatically.
+
+Application packets are deterministic projections of profile, verified project facts, resume selection and the posting. Approval freezes a material fingerprint. The local Python runner checks freshness, posting content, approval, resume hash, duplicate history and a daily attempt ledger before invoking the Playwright Lever adapter. Unknown outcomes remain UNCERTAIN and are never automatically retried. Confirmed submissions update application history.
+
+Development SQLite startup makes an online backup and upgrades under a process lock when needed. Production/PostgreSQL migrations stay explicit.

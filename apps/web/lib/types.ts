@@ -11,6 +11,7 @@ export interface Match {
   score_suppressed: boolean;
 }
 export interface Job {
+  categories?: string[];
   id: string;
   title: string;
   company_name: string;
@@ -43,6 +44,7 @@ export interface Job {
   }[];
 }
 export interface Preferences {
+  career_categories?: string[];
   target_roles: string[];
   countries: string[];
   watchlist: string[];

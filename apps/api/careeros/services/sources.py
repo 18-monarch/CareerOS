@@ -80,15 +80,9 @@ class JobSourceAdapter(ABC):
 
     def common(self, title, description):
         parsed = parse_notice(description)["job"]
-        role = (
-            "Backend Engineer"
-            if "backend" in title.lower()
-            else "Full-Stack Engineer"
-            if any(x in title.lower() for x in ("full stack", "full-stack"))
-            else "Software Engineer"
-            if any(x in title.lower() for x in ("software", "engineer", "developer"))
-            else title
-        )
+        from careeros.services.categories import normalized_role
+
+        role = normalized_role(title)
         return {
             "company_name": self.config.get("company_name") or self.config.get("board", "Unknown"),
             "title": title,

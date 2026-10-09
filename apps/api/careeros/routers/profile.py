@@ -142,7 +142,7 @@ def edit_mastery(
 @router.get("/resumes")
 def resumes(user: User = Depends(current_user), db: Session = Depends(get_db)):
     return [
-        {"id": r.id, "name": r.name, **r.data}
+        {"id": r.id, "name": r.name, **{k: v for k, v in r.data.items() if k != "content_base64"}}
         for r in db.scalars(select(ResumeVersion).where(ResumeVersion.user_id == user.id))
     ]
 
@@ -156,7 +156,11 @@ def add_resume(body: ResumeIn, user: User = Depends(current_user), db: Session =
     row = ResumeVersion(user_id=user.id, name=body.name, data=body.model_dump(exclude={"name"}))
     db.add(row)
     db.commit()
-    return {"id": row.id, "name": row.name, **row.data}
+    return {
+        "id": row.id,
+        "name": row.name,
+        **{k: v for k, v in row.data.items() if k != "content_base64"},
+    }
 
 
 @router.put("/resumes/{id}")
@@ -168,9 +172,13 @@ def edit_resume(
     if body.is_master:
         for other in db.scalars(select(ResumeVersion).where(ResumeVersion.user_id == user.id)):
             other.data = {**other.data, "is_master": False}
-    row.name, row.data = body.name, body.model_dump(exclude={"name"})
+    row.name, row.data = body.name, {**row.data, **body.model_dump(exclude={"name"})}
     db.commit()
-    return {"id": row.id, "name": row.name, **row.data}
+    return {
+        "id": row.id,
+        "name": row.name,
+        **{k: v for k, v in row.data.items() if k != "content_base64"},
+    }
 
 
 @router.delete("/resumes/{id}")

@@ -2,7 +2,33 @@
 
 import re
 
+from careeros.services.categories import classify
+
 CATALOG = (
+    {
+        "kind": "greenhouse",
+        "board": "project44",
+        "company_name": "project44",
+        "url": "https://job-boards.greenhouse.io/project44",
+    },
+    {
+        "kind": "lever",
+        "board": "hevodata",
+        "company_name": "Hevo Data",
+        "url": "https://jobs.lever.co/hevodata",
+    },
+    {
+        "kind": "ashby",
+        "board": "level-ai",
+        "company_name": "Level AI",
+        "url": "https://jobs.ashbyhq.com/level-ai",
+    },
+    {
+        "kind": "ashby",
+        "board": "niural",
+        "company_name": "Niural",
+        "url": "https://jobs.ashbyhq.com/niural",
+    },
     {
         "kind": "greenhouse",
         "board": "enterpret",
@@ -51,7 +77,14 @@ SENIOR = re.compile(r"\b(senior|sr\.?|staff|principal|director|manager|lead)\b",
 
 
 def early_career(job):
-    return bool(EARLY.search(job.title) and TECH.search(job.title) and not SENIOR.search(job.title))
+    return bool(
+        EARLY.search(job.title)
+        and (
+            TECH.search(job.title)
+            or set(classify(job.title)) & {"design", "ux_research", "design_engineering"}
+        )
+        and not SENIOR.search(job.title)
+    )
 
 
 def enrich_location(job):

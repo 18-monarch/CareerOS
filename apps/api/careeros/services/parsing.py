@@ -6,6 +6,19 @@ import re
 from careeros.schemas import JobIn
 
 SKILLS = [
+    "Figma",
+    "Framer",
+    "Sketch",
+    "Adobe XD",
+    "Wireframing",
+    "Prototyping",
+    "User research",
+    "Usability testing",
+    "Interaction design",
+    "Design systems",
+    "Accessibility",
+    "Typography",
+    "Information architecture",
     "Python",
     "C++",
     "Java",

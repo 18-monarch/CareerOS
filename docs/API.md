@@ -38,7 +38,7 @@ All endpoints below except health and initial authentication require the access 
 
 `GET /jobs?q=backend&country=India&eligibility=ELIGIBLE&min_score=60&page=1&page_size=20&sort=match`
 
-Also supports `role`, `company`, `city`, `remote`, `employment_type`, `source`, `skill`, `state`, `graduation_year`, `max_cgpa`, `deadline_before`. Sort is match (default), deadline or newest. Response: `{items,total,page,page_size}`. Page size is limited to 100.
+Also supports `category`, `role`, `company`, `city`, `remote`, `employment_type`, `source`, `skill`, `state`, `graduation_year`, `max_cgpa`, `deadline_before`. Sort is match (default), deadline or newest. Response: `{items,total,page,page_size}`. Page size is limited to 100.
 
 ## Example manual posting
 
@@ -66,3 +66,20 @@ Use actual application URLs and deadline timestamps from the source; leave unkno
 ```
 
 Error responses never echo submitted passwords or tokens. Use the request ID to correlate safe logs. Invalid credentials → 401; missing/invalid CSRF or wrong Origin → 403; record not owned/found → 404; uniqueness/busy-writer/source-identity conflict or deleting a resume used by an application → 409; invalid schema → 422; throttle → 429; backend unavailable at gateway → 502.
+
+## Research and applications
+
+| Endpoint | Operation |
+|---|---|
+| `/research` | GET personalized grouped brief, research leads and search plan |
+| `/research/leads` | POST a candidate URL for verification |
+| `/research/leads/{id}/verify` | POST retry original-source verification |
+| `/research/leads/{id}` | DELETE dismiss lead |
+| `/resumes/{id}/pdf` | PUT base64 PDF, maximum decoded size 650 KB; reads expose metadata only |
+| `/application-settings` | PUT preparation mode, resumes, truthful saved answers and submission limits |
+| `/application-desk` | GET drafts and settings |
+| `/application-desk/prepare` | POST job ID to build a truthful packet |
+| `/application-desk/{id}` | PUT editable draft text and answers |
+| `/application-desk/{id}/approve`, `/application-desk/{id}/cancel` | POST approval or cancellation |
+
+The local runner performs browser submission; API approval alone does not submit. All records are account-scoped and mutations require CSRF. See the generated OpenAPI schema for exact fields.

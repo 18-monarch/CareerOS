@@ -13,14 +13,28 @@ from careeros.config import get_settings
 from careeros.db import engine
 from careeros.logging_config import configure_logging
 from careeros.middleware import RequestSizeLimit
-from careeros.routers import applications, auth, insights, jobs, profile, sources
+from careeros.routers import (
+    application_desk,
+    applications,
+    auth,
+    insights,
+    jobs,
+    profile,
+    research,
+    sources,
+)
 
 logger = configure_logging()
 
 
 @asynccontextmanager
 async def lifespan(app):
+    import asyncio
+
     from careeros.services import discovery
+    from careeros.services.startup import migrate_local
+
+    await asyncio.to_thread(migrate_local, engine)
 
     if get_settings().auto_discovery_enabled:
         discovery.scheduler = discovery.DiscoveryScheduler()
@@ -125,6 +139,19 @@ async def integrity_error(request, exc):
 
 @app.exception_handler(Exception)
 async def internal_error(request, exc):
+    if isinstance(exc, SQLAlchemyError):
+        from careeros.services.startup import SCHEMA_HEAD, schema_revision
+
+        if schema_revision(engine) != SCHEMA_HEAD:
+            return JSONResponse(
+                {
+                    "error": {
+                        "message": "Database upgrade required. Stop CareerOS and run python -m alembic upgrade head from the project folder, then restart.",
+                        "request_id": getattr(request.state, "request_id", None),
+                    }
+                },
+                status_code=503,
+            )
     logger.error(
         "unhandled_error",
         extra={
@@ -154,7 +181,7 @@ def ready():
         with engine.connect() as connection:
             revision = connection.scalar(text("SELECT version_num FROM alembic_version"))
             connection.execute(text("SELECT 1 FROM users LIMIT 1"))
-        if revision != "d82f04":
+        if revision != "e91a05":
             return JSONResponse(
                 {
                     "status": "not_ready",
@@ -175,5 +202,7 @@ for router in (
     applications.router,
     insights.router,
     sources.router,
+    research.router,
+    application_desk.router,
 ):
     app.include_router(router)

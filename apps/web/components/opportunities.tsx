@@ -13,6 +13,7 @@ import {
   Feedback,
   useAction,
 } from "./ui";
+import { careerCategories } from "@/lib/categories";
 import JobCard from "./job-card";
 import JobDetail from "./job-detail";
 import JobForm from "./job-form";
@@ -53,6 +54,18 @@ export default function Opportunities() {
         Eligibility first. Fit second. Every score explained.
       </Heading>
       <div className="filter-bar">
+        <select
+          aria-label="Career category filter"
+          value={filters.category || ""}
+          onChange={(e) => set("category", e.target.value)}
+        >
+          <option value="">All career categories</option>
+          {Object.entries(careerCategories).map(([k, v]) => (
+            <option key={k} value={k}>
+              {v}
+            </option>
+          ))}
+        </select>
         <label className="search">
           <Search size={18} />
           <input

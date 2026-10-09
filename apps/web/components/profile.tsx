@@ -1,4 +1,5 @@
 "use client";
+import { careerCategories } from "@/lib/categories";
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { api, send, list, pretty } from "@/lib/api";
@@ -58,14 +59,19 @@ function ProfileForm({ profile: p }: { profile: ProfileData }) {
               "experience_years",
             ])
               data[key] = f.get(key) === "" ? null : Number(f.get(key));
+            const externalProfiles = JSON.parse(links);
+            if (f.get("portfolio"))
+              externalProfiles.portfolio = String(f.get("portfolio"));
+            else delete externalProfiles.portfolio;
             await send(
               "/profile",
               {
                 ...data,
                 work_authorizations: list(String(f.get("work_authorizations"))),
-                external_profiles: JSON.parse(links),
+                external_profiles: externalProfiles,
                 preferences: {
                   ...p.preferences,
+                  career_categories: f.getAll("career_categories"),
                   target_roles: list(String(f.get("target_roles"))),
                   countries: list(String(f.get("countries"))),
                   watchlist: list(String(f.get("watchlist"))),
@@ -144,6 +150,35 @@ function ProfileForm({ profile: p }: { profile: ProfileData }) {
             </Field>
           ))}
         </div>
+        <fieldset className="panel spaced">
+          <legend>Career interests</legend>
+          <div className="filter-grid">
+            {Object.entries(careerCategories).map(([k, v]) => (
+              <label className="checkbox" key={k}>
+                <input
+                  type="checkbox"
+                  name="career_categories"
+                  value={k}
+                  defaultChecked={(
+                    p.preferences.career_categories || []
+                  ).includes(k)}
+                />
+                {v}
+              </label>
+            ))}
+          </div>
+        </fieldset>
+        <Field
+          label="Portfolio URL"
+          hint="Used for product-design applications. Add your actual portfolio or case studies."
+        >
+          <input
+            type="url"
+            name="portfolio"
+            defaultValue={p.external_profiles.portfolio || ""}
+            placeholder="https://your-portfolio.example"
+          />
+        </Field>
         <Field label="This week’s plan">
           <textarea
             name="weekly_plan"
@@ -249,6 +284,8 @@ function Skills() {
           <Field label="Category">
             <select name="category" defaultValue={editing?.category}>
               {[
+                "Product Design",
+                "UX Research",
                 "Programming",
                 "Backend",
                 "Frontend",
@@ -335,6 +372,7 @@ interface ResumeMetadata {
   is_master: boolean;
   version: string;
   notes: string;
+  sha256?: string;
 }
 function Resumes() {
   const [editing, setEditing] = useState<ResumeMetadata | null>(null);
@@ -347,14 +385,51 @@ function Resumes() {
   return (
     <section className="panel spaced">
       <h2>Resume versions</h2>
-      <p className="muted">Track metadata only. Resume files stay with you.</p>
+      <p className="muted">
+        Add resume metadata, then upload a PDF (up to 650 KB) for the local
+        application runner. Stored in your private CareerOS database.
+      </p>
       <ErrorBox error={error} />
       {data?.map((r) => (
         <div className="list-row" key={r.id}>
           <span>
             {r.name} · v{r.version}
             {r.is_master ? " · Master" : ""}
-            <small>{r.file_name}</small>
+            <small>
+              {r.file_name}
+              {r.sha256 ? " · PDF uploaded" : " · PDF not uploaded"}
+            </small>
+            <label>
+              Upload PDF
+              <input
+                type="file"
+                accept="application/pdf"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (!file) return;
+                  action.run(async () => {
+                    if (file.size > 650000)
+                      throw new Error("Choose a PDF no larger than 650 KB");
+                    const encoded = await new Promise<string>(
+                      (resolve, reject) => {
+                        const reader = new FileReader();
+                        reader.onload = () =>
+                          resolve(String(reader.result).split(",")[1]);
+                        reader.onerror = () =>
+                          reject(new Error("Could not read file"));
+                        reader.readAsDataURL(file);
+                      },
+                    );
+                    await send(
+                      `/resumes/${r.id}/pdf`,
+                      { content_base64: encoded },
+                      "PUT",
+                    );
+                    await client.invalidateQueries();
+                  }, "PDF uploaded");
+                }}
+              />
+            </label>
           </span>
           <button className="text-button" onClick={() => setEditing(r)}>
             Edit

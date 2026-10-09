@@ -71,7 +71,7 @@ def write_application(db, user, body, app=None):
         and not app.applied_at
     ):
         app.applied_at = utcnow()
-    app.data = body.model_dump(mode="json", exclude={"job_id", "status"})
+    app.data = {**app.data, **body.model_dump(mode="json", exclude={"job_id", "status"})}
     db.add(AuditLog(user_id=user.id, action="application.updated", target_id=app.id))
     db.commit()
     return serialize(app)

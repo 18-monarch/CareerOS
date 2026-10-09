@@ -1,5 +1,7 @@
 # CareerOS
 
+**October 9 local release:** begin with [START-HERE.md](START-HERE.md). Windows users can run `RUN-WINDOWS.cmd`. This update adds category research, product design, PDF application packets and an optional local Lever runner.
+
 Personalized Internship, Job, Learning & Career Intelligence System.
 
 CareerOS is a private workspace for deciding what to apply to, checking hard eligibility requirements, seeing why an opportunity fits, tracking the hiring funnel, and learning skills that appear in relevant jobs. It starts with Mohit's Nirma/2028 profile through an **explicit, editable demo seed**. New accounts begin empty.
@@ -101,7 +103,7 @@ Convenience commands: `make install`, `make migrate`, `make seed`, `make api`, `
 
 ## Automatic internship discovery
 
-Automatic discovery is on by default while the backend runs. Existing and new accounts receive six starter public employer boards automatically; no API key or manual board entry is required. A first check starts within about 30 seconds and subsequent checks run every six hours. Failed/partial checks retry after one hour. Due checks resume after a restart.
+Automatic discovery is on by default while the backend runs. Existing and new accounts receive ten starter public employer boards automatically; no API key or manual board entry is required. A first check starts within about 30 seconds and subsequent checks run every six hours. Failed/partial checks retry after one hour. Due checks resume after a restart.
 
 The starter feeds keep technical internships and explicitly junior/graduate/entry-level roles; manual sources retain their existing behavior. Jobs are deduplicated and ranked against your profile. Imported academic/deadline requirements still need review. Dashboard and Sources show last/next checks, new jobs, coverage and failures. Sources also has **Check now**, **Pause discovery** and **Resume discovery**.
 
@@ -180,7 +182,7 @@ See [DEPLOYMENT.md](docs/DEPLOYMENT.md) for Neon → Render → Vercel setup, cr
 - No email verification, self-service password reset, MFA or public signup abuse service. Deploy as a private/personal tool and close registration after onboarding.
 - Source-board country is configured, not inferred with certainty. Use Unknown for mixed boards; manual review is required for visa, ambiguous degree and language rules.
 - The conservative parser does not understand every notice format. Preferred/required skill inference from prose remains heuristic. Review extraction evidence; use manual entry if needed.
-- No resume upload or resume-content analysis; metadata only. No automatic LinkedIn/LeetCode/email/Drive sync and no automatic job applications.
+- PDF resumes and reviewed application packets are supported. The optional local runner supports standard Lever forms only; unknown questions and CAPTCHAs require handoff. No automatic LinkedIn/LeetCode/email/Drive sync. See [START-HERE.md](START-HERE.md).
 - Source closure is opt-in: choose 2–10 consecutive complete, nonempty, error-free snapshots before marking an occurrence missing. A canonical job closes only after every occurrence is inactive. Empty/failed/partial feeds do not trigger closure. Manual archive survives refresh and can be explicitly restored.
 - Ranking and filtering load a user's postings into memory before sorting/pagination. Suitable for hundreds to low thousands, not millions. Persisted match snapshots are available for future database-side search; UI recomputes for correctness after edits.
 - Score weights, learning-hour estimates and funnel thresholds are transparent heuristics, not validated hiring predictions.

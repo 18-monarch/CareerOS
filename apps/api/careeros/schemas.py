@@ -50,7 +50,41 @@ DEFAULT_WEIGHTS = {
 }
 
 
+class ApplicationSettingsIn(Schema):
+    mode: Literal["prepare", "auto_submit"] = "prepare"
+    auto_prepare: bool = False
+    phone: str = Field(default="", max_length=40)
+    software_resume_id: str | None = None
+    design_resume_id: str | None = None
+    countries: list[str] = Field(default_factory=lambda: ["India"], max_length=30)
+    companies: list[str] = Field(default_factory=list, max_length=100)
+    minimum_score: int = Field(default=65, ge=0, le=100)
+    daily_limit: int = Field(default=3, ge=1, le=10)
+    answers: dict[str, str] = Field(default_factory=dict, max_length=40)
+
+    @field_validator("answers")
+    @classmethod
+    def bounded_answers(cls, answers):
+        if any(len(k) > 500 or len(v) > 4000 for k, v in answers.items()):
+            raise ValueError("Question or answer is too long")
+        return answers
+
+
 class PreferenceIn(Schema):
+    application_settings: ApplicationSettingsIn = Field(default_factory=ApplicationSettingsIn)
+    career_categories: list[str] = Field(
+        default_factory=lambda: ["software", "backend", "fullstack", "design"], max_length=15
+    )
+
+    @field_validator("career_categories")
+    @classmethod
+    def valid_categories(cls, value):
+        from careeros.services.categories import CATEGORIES
+
+        if any(v not in CATEGORIES for v in value):
+            raise ValueError("Unknown career category")
+        return list(dict.fromkeys(value))
+
     target_roles: list[str] = Field(
         default_factory=lambda: ["Software Engineer", "Backend Engineer", "Full-Stack Engineer"],
         max_length=20,

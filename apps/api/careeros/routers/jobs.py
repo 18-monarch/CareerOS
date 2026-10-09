@@ -27,6 +27,7 @@ def jobs(
     q: str = "",
     role: str = "",
     company: str = "",
+    category: str = "",
     country: str = "",
     city: str = "",
     remote: str = "",
@@ -53,6 +54,8 @@ def jobs(
     result = []
     for j in records:
         j["application"] = applications.get(j["id"])
+        if category and category not in j["categories"]:
+            continue
         r = j["requirements"]
         if q.casefold() not in f"{j['title']} {j['company_name']} {j['description']}".casefold():
             continue

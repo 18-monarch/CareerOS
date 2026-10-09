@@ -31,7 +31,7 @@ cd ../..
 scripts/verify-browser.sh
 ```
 
-The script creates a fresh temporary SQLite database, migrates and seeds it, starts the real API plus production frontend, runs all three Playwright journeys and shuts down its servers. It never reuses the developer's root `.env` database. A test-only server entry point replaces the external Greenhouse transport with deterministic source fixtures; it refuses to run without explicit development/test settings. Application logic remains real.
+The script creates a fresh temporary SQLite database, migrates and seeds it, starts the real API plus production frontend, runs the standard Playwright scenarios (the background-discovery journey runs separately) and shuts down its servers. It never reuses the developer's root `.env` database. A test-only server entry point replaces the external Greenhouse transport with deterministic source fixtures; it refuses to run without explicit development/test settings. Application logic remains real.
 
 Optional variables: `PYTHON_BIN` (defaults to `.venv/bin/python`), `WEB_PORT`, `API_PORT`, `DEMO_PASSWORD`, `CHROMIUM_EXECUTABLE_PATH` (portable browser), and `E2E_DATABASE_URL` for a **disposable** PostgreSQL database. If the frontend build used `NEXT_DIST_DIR`, pass the same value to this script. Native PostgreSQL browser verification is configured in CI.
 
@@ -64,3 +64,9 @@ E2E_AUTODISCOVERY=true scripts/verify-browser.sh discovery.spec.ts
 ```
 
 The test creates an account and waits for jobs without connecting any source or clicking an import button, checks filtered records, then pauses/reloads/resumes and verifies repeat ingestion adds no duplicates. Only external feed HTTP is mocked. `discover-jobs` can separately check live boards in a disposable database.
+
+## Research and application release
+
+`test_research_desk.py` covers categories, source verification, lead deduplication, provider failures, query rotation, listing closure/reactivation, PDF integrity, truthful draft approval, account isolation, automatic approval constraints, posting-change handoff, uncertain outcomes, meaningful alerts and startup migration/backup preservation.
+
+`research.spec.ts` covers category browse → packet preparation → approval → mobile reload. `application-browser.spec.ts` routes controlled Lever fixtures to exercise actual browser fill/submit/confirmation plus CAPTCHA and required-question handoff. No real employer receives an application during tests. Search API tests use mocked transport; credentialed live search is a separate configuration check.

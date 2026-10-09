@@ -15,6 +15,15 @@ if context.is_offline_mode():
     )
     with context.begin_transaction():
         context.run_migrations()
+elif config.attributes.get("connection") is not None:
+    connection = config.attributes["connection"]
+    context.configure(
+        connection=connection,
+        target_metadata=target_metadata,
+        render_as_batch=connection.dialect.name == "sqlite",
+    )
+    with context.begin_transaction():
+        context.run_migrations()
 else:
     connectable = build_engine(url)
     with connectable.connect() as connection:

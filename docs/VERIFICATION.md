@@ -1,3 +1,15 @@
+# Verification
+
+## October 9, 2026 — research and application release
+
+Executed: **85 backend tests**, **5 frontend component tests**, lint/format/type checks, production build and **7 Chromium scenarios** (six standard scenarios plus the separately enabled background discovery journey). Application adapter checks use controlled browser fixtures; no real employer application was sent.
+
+A live public-feed run fetched **226 postings from ten boards**, filtered 219 and imported **7 internships**, including a Product Design Intern role in India, with zero source errors. Five imported roles were located in India and two in the US. Counts are a point-in-time integration check; eligibility is not inferred from role presence.
+
+SQLite migration head `e91a05`, downgrade/upgrade, schema drift, backup and data retention checks passed. The current release has not been run on native Windows or native PostgreSQL. Brave HTTP contracts, search failure handling and query rotation were tested with fixtures; credentialed live Brave search, live email, cloud deployment and real employer submissions were not performed. UI screenshots use deterministic fixtures.
+
+See [START-HERE.md](../START-HERE.md) for supported behavior and setup. The following sections record earlier release evidence and do not establish current native-platform execution.
+
 # Engineering verification report
 
 Last updated: 8 October 2026. This report distinguishes executed checks from supplied configuration. No cloud deployment is claimed.

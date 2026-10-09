@@ -161,8 +161,8 @@ export default function Sources() {
         <h2>Add a public source</h2>
         <SourceForm />
         <p className="footnote">
-          No private LinkedIn scraping, CAPTCHA bypass or auto-apply.
-          Unsupported sources can be entered manually.
+          Public sources only. Use Application desk for supported, authorized
+          submissions. Unsupported sources can be entered manually.
         </p>
       </section>
     </>

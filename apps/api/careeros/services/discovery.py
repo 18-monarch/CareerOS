@@ -82,6 +82,19 @@ async def run_user(db, user_id):
                     summary[key] += result.get(key, 0)
                 summary["errors"] += int(result["status"] in ("FAILED", "DEGRADED", "RUNNING"))
             user = db.get(User, user_id)
+            from careeros.services.research import recheck_leads, run_research
+
+            summary["research"] = (
+                await run_research(
+                    db, user, state.summary.get("research", {}).get("next_query_offset", 0)
+                )
+                if state.enabled
+                else {"status": "PAUSED", "errors": 0}
+            )
+            if state.enabled:
+                summary["rechecked"] = await recheck_leads(db, user)
+                summary["errors"] += summary["rechecked"]["errors"]
+            summary["errors"] += summary["research"]["errors"]
             with job_lock(db.bind, f"ingest-user:{user_id}") as expiry_lock:
                 if expiry_lock:
                     for job in db.scalars(
@@ -95,6 +108,9 @@ async def run_user(db, user_id):
                         ):
                             job.is_active = False
                     db.commit()
+            from careeros.services.application_desk import auto_prepare
+
+            summary["drafts_prepared"] = auto_prepare(db, user)
             live = [job for job in ranked_jobs(db, user) if not job["is_demo"] and job["is_active"]]
             summary["live_opportunities"] = len(live)
             summary["ready_to_apply"] = sum(
@@ -109,6 +125,9 @@ async def run_user(db, user_id):
                         generate(db, user, kind)
                         for kind in ("high-match", "deadline", "daily", "weekly")
                     )
+                    from careeros.services.notifications import meaningful_updates
+
+                    summary["research_alerts"] = meaningful_updates(db, user)
                     await deliver(db, user)
             db.refresh(state)
             state.status = "DEGRADED" if summary["errors"] else "HEALTHY"

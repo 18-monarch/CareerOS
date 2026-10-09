@@ -304,3 +304,22 @@ class AuditLog(Entity, Base):
     user_id: Mapped[str] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
     action: Mapped[str] = mapped_column(String(80))
     target_id: Mapped[str | None] = mapped_column(String(36))
+
+
+class ResearchLead(Entity, Base):
+    __tablename__ = "research_leads"
+    __table_args__ = (UniqueConstraint("user_id", "url_key"),)
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    url_key: Mapped[str] = mapped_column(String(64))
+    url: Mapped[str] = mapped_column(Text)
+    status: Mapped[str] = mapped_column(String(40), default="NEW")
+    data: Mapped[dict] = mapped_column(JSON, default=dict)
+
+
+class ApplicationDraft(Entity, Base):
+    __tablename__ = "application_drafts"
+    __table_args__ = (UniqueConstraint("user_id", "job_id"),)
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    job_id: Mapped[str] = mapped_column(ForeignKey("jobs.id", ondelete="CASCADE"))
+    status: Mapped[str] = mapped_column(String(40), default="DRAFT")
+    data: Mapped[dict] = mapped_column(JSON, default=dict)

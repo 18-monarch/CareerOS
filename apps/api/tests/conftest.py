@@ -2,6 +2,7 @@
 import os
 
 os.environ["AUTO_DISCOVERY_ENABLED"] = "false"
+os.environ["AUTO_MIGRATE_LOCAL"] = "false"
 
 import pytest
 from careeros.db import Base, build_engine, get_db

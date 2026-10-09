@@ -1,4 +1,5 @@
 "use client";
+import Link from "next/link";
 import { useState } from "react";
 import JobForm from "./job-form";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -54,6 +55,25 @@ export default function JobDetail({
             <span className="eyebrow">{job.company_name}</span>
             {job.is_demo && <Badge>Demo · not a live vacancy</Badge>}
           </div>
+          {!job.is_demo && job.is_active && (
+            <div className="form-actions">
+              <button
+                className="button primary"
+                disabled={action.busy}
+                onClick={() =>
+                  action.run(async () => {
+                    await send("/application-desk/prepare", { job_id: job.id });
+                    await client.invalidateQueries({
+                      queryKey: ["application-desk"],
+                    });
+                  }, "Draft prepared. Open Application desk to review it.")
+                }
+              >
+                Prepare application
+              </button>
+              <Link href="/application-desk">Application desk</Link>
+            </div>
+          )}
           <h2 className="detail-title">{job.title}</h2>
           <p className="muted">
             {job.locations.join(", ")} · {job.country} · Closes{" "}

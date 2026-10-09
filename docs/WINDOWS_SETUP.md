@@ -93,3 +93,7 @@ The API now checks sources automatically every six hours while it runs. Pause/re
 ## Verification boundary
 
 The fix was installed and tested on Linux with Windows dependency markers checked explicitly. A Windows CI job now covers actual installation, database operations, process locks and frontend build, but has not run remotely. Native Windows runtime verification still requires running it on Windows.
+
+## October 9 update
+
+Start with [START-HERE.md](../START-HERE.md). `RUN-WINDOWS.cmd` installs/builds and opens both services. Development SQLite startup now backs up and upgrades an older database automatically. Preserve your database, `.env`, frontend environment and Git history when copying the update. `START-APPLICATION-RUNNER.cmd` installs Chromium and prompts for preview/submission mode. This launcher was inspected but not executed on native Windows in this environment.

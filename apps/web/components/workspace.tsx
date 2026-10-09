@@ -37,9 +37,13 @@ const Sources = dynamic(() => import("./sources"));
 const Market = dynamic(() => import("./market"));
 const Notifications = dynamic(() => import("./notifications"));
 const DSA = dynamic(() => import("./dsa"));
+const Research = dynamic(() => import("./research"));
+const ApplicationDesk = dynamic(() => import("./application-desk"));
 const nav = [
   ["dashboard", "Overview", LayoutDashboard],
+  ["research", "Internship brief", Compass],
   ["opportunities", "Opportunities", BriefcaseBusiness],
+  ["application-desk", "Application desk", PanelsTopLeft],
   ["applications", "Applications", PanelsTopLeft],
   ["learning", "Learn → Apply", BookOpen],
   ["campus", "Nirma campus", GraduationCap],
@@ -92,6 +96,8 @@ export default function Workspace({ section }: { section: string }) {
     return <AuthScreen onLogin={() => client.invalidateQueries()} />;
   const views: Record<string, React.ReactNode> = {
     dashboard: <Dashboard name={me.data.name} />,
+    research: <Research />,
+    "application-desk": <ApplicationDesk />,
     opportunities: <Opportunities />,
     applications: <Applications />,
     learning: <Learning />,

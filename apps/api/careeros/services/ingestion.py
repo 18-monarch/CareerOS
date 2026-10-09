@@ -1,3 +1,4 @@
+import asyncio
 import logging
 import time
 
@@ -57,7 +58,7 @@ async def ingest_source(db, source):
         )
         try:
             adapter = ADAPTERS[source.kind](source.config)
-            records = await adapter.fetch_jobs()
+            records = await asyncio.wait_for(adapter.fetch_jobs(), timeout=60)
             if not isinstance(records, list):
                 raise ValueError("Source response must contain a job list")
             run.fetched = len(records)
@@ -77,7 +78,18 @@ async def ingest_source(db, source):
                                 run.skipped += 1
                                 continue
                             normalized = enrich_location(normalized)
-                        _, created = upsert_job(db, source.user_id, normalized, source, raw)
+                        saved, created = upsert_job(db, source.user_id, normalized, source, raw)
+                        from careeros.db import utcnow
+
+                        if source.kind in ("greenhouse", "lever", "ashby"):
+                            saved.data = {
+                                **saved.data,
+                                "listing_verification": {
+                                    "method": "public_ats",
+                                    "checked_at": utcnow().isoformat(),
+                                    "url": normalized.source_url,
+                                },
+                            }
                     seen.add(normalized.external_id or identity(normalized.model_dump(mode="json")))
                     run.added += int(created)
                     run.updated += int(not created)

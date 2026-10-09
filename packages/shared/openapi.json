@@ -747,6 +747,16 @@
             }
           },
           {
+            "name": "category",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "Category"
+            }
+          },
+          {
             "name": "country",
             "in": "query",
             "required": false,
@@ -2228,6 +2238,431 @@
           }
         }
       }
+    },
+    "/research": {
+      "get": {
+        "tags": [
+          "Research"
+        ],
+        "summary": "Research",
+        "operationId": "research_research_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/research/leads": {
+      "post": {
+        "tags": [
+          "Research"
+        ],
+        "summary": "Add Lead",
+        "operationId": "add_lead_research_leads_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LeadIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/research/leads/{id}/verify": {
+      "post": {
+        "tags": [
+          "Research"
+        ],
+        "summary": "Check Lead",
+        "operationId": "check_lead_research_leads__id__verify_post",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/research/leads/{id}": {
+      "delete": {
+        "tags": [
+          "Research"
+        ],
+        "summary": "Dismiss Lead",
+        "operationId": "dismiss_lead_research_leads__id__delete",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/application-desk": {
+      "get": {
+        "tags": [
+          "Application desk"
+        ],
+        "summary": "Desk",
+        "operationId": "desk_application_desk_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/application-settings": {
+      "put": {
+        "tags": [
+          "Application desk"
+        ],
+        "summary": "Update Settings",
+        "operationId": "update_settings_application_settings_put",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApplicationSettingsIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/resumes/{id}/pdf": {
+      "put": {
+        "tags": [
+          "Application desk"
+        ],
+        "summary": "Upload Pdf",
+        "operationId": "upload_pdf_resumes__id__pdf_put",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PDFIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/application-desk/prepare": {
+      "post": {
+        "tags": [
+          "Application desk"
+        ],
+        "summary": "Prepare Draft",
+        "operationId": "prepare_draft_application_desk_prepare_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PrepareIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/application-desk/{id}": {
+      "put": {
+        "tags": [
+          "Application desk"
+        ],
+        "summary": "Edit Draft",
+        "operationId": "edit_draft_application_desk__id__put",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DraftEdit"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/application-desk/{id}/approve": {
+      "post": {
+        "tags": [
+          "Application desk"
+        ],
+        "summary": "Approve Draft",
+        "operationId": "approve_draft_application_desk__id__approve_post",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApprovalIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/application-desk/{id}/cancel": {
+      "post": {
+        "tags": [
+          "Application desk"
+        ],
+        "summary": "Cancel Draft",
+        "operationId": "cancel_draft_application_desk__id__cancel_post",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -2319,6 +2754,107 @@
         ],
         "title": "ApplicationIn"
       },
+      "ApplicationSettingsIn": {
+        "properties": {
+          "mode": {
+            "type": "string",
+            "enum": [
+              "prepare",
+              "auto_submit"
+            ],
+            "title": "Mode",
+            "default": "prepare"
+          },
+          "auto_prepare": {
+            "type": "boolean",
+            "title": "Auto Prepare",
+            "default": false
+          },
+          "phone": {
+            "type": "string",
+            "maxLength": 40,
+            "title": "Phone",
+            "default": ""
+          },
+          "software_resume_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Software Resume Id"
+          },
+          "design_resume_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Design Resume Id"
+          },
+          "countries": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "maxItems": 30,
+            "title": "Countries"
+          },
+          "companies": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "maxItems": 100,
+            "title": "Companies"
+          },
+          "minimum_score": {
+            "type": "integer",
+            "maximum": 100.0,
+            "minimum": 0.0,
+            "title": "Minimum Score",
+            "default": 65
+          },
+          "daily_limit": {
+            "type": "integer",
+            "maximum": 10.0,
+            "minimum": 1.0,
+            "title": "Daily Limit",
+            "default": 3
+          },
+          "answers": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object",
+            "maxProperties": 40,
+            "title": "Answers"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "ApplicationSettingsIn"
+      },
+      "ApprovalIn": {
+        "properties": {
+          "reviewed": {
+            "type": "boolean",
+            "title": "Reviewed"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "reviewed"
+        ],
+        "title": "ApprovalIn"
+      },
       "Credentials": {
         "properties": {
           "email": {
@@ -2404,6 +2940,29 @@
           "enabled"
         ],
         "title": "DiscoveryPreference"
+      },
+      "DraftEdit": {
+        "properties": {
+          "cover_letter": {
+            "type": "string",
+            "maxLength": 10000,
+            "title": "Cover Letter"
+          },
+          "answers": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object",
+            "maxProperties": 40,
+            "title": "Answers"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "cover_letter"
+        ],
+        "title": "DraftEdit"
       },
       "HTTPValidationError": {
         "properties": {
@@ -2692,6 +3251,21 @@
         ],
         "title": "JobIn"
       },
+      "LeadIn": {
+        "properties": {
+          "url": {
+            "type": "string",
+            "maxLength": 2000,
+            "title": "Url"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "url"
+        ],
+        "title": "LeadIn"
+      },
       "LearningIn": {
         "properties": {
           "topic": {
@@ -2895,6 +3469,21 @@
         ],
         "title": "NoticeIn"
       },
+      "PDFIn": {
+        "properties": {
+          "content_base64": {
+            "type": "string",
+            "maxLength": 900000,
+            "title": "Content Base64"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "content_base64"
+        ],
+        "title": "PDFIn"
+      },
       "PasswordChange": {
         "properties": {
           "current_password": {
@@ -2920,6 +3509,17 @@
       },
       "PreferenceIn": {
         "properties": {
+          "application_settings": {
+            "$ref": "#/components/schemas/ApplicationSettingsIn"
+          },
+          "career_categories": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "maxItems": 15,
+            "title": "Career Categories"
+          },
           "target_roles": {
             "items": {
               "type": "string"
@@ -2982,6 +3582,20 @@
         "additionalProperties": false,
         "type": "object",
         "title": "PreferenceIn"
+      },
+      "PrepareIn": {
+        "properties": {
+          "job_id": {
+            "type": "string",
+            "title": "Job Id"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "job_id"
+        ],
+        "title": "PrepareIn"
       },
       "ProfileIn": {
         "properties": {

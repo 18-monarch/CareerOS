@@ -1,6 +1,7 @@
 "use client";
 import { MapPin, Clock3, Bookmark } from "lucide-react";
 import { Job } from "@/lib/types";
+import { careerCategories } from "@/lib/categories";
 import { date } from "@/lib/api";
 import { Badge, StateBadge } from "./ui";
 export default function JobCard({
@@ -42,6 +43,9 @@ export default function JobCard({
         </div>
       </div>
       <div className="skill-chips">
+        {job.categories?.map((c) => (
+          <span key={c}>{careerCategories[c]}</span>
+        ))}
         {job.match.strong_matches.slice(0, 4).map((s) => (
           <span key={s}>{s}</span>
         ))}

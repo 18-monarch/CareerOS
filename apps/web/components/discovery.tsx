@@ -13,7 +13,20 @@ type Discovery = {
   next_run: string | null;
   interval_hours: number;
   error: string | null;
-  summary: Record<string, number>;
+  summary: {
+    added?: number;
+    live_opportunities?: number;
+    fetched?: number;
+    skipped?: number;
+    ready_to_apply?: number;
+    review_required?: number;
+    research?: {
+      status: string;
+      leads?: number;
+      verified?: number;
+      errors: number;
+    };
+  };
   catalog: { company: string; url: string }[];
 };
 const when = (value: string | null) =>
@@ -32,7 +45,7 @@ export default function DiscoveryPanel({
   const { data, error } = useQuery({
     queryKey: ["discovery"],
     queryFn: () => api<Discovery>("/discovery"),
-    refetchInterval: 5000,
+    refetchInterval: (q) => (q.state.error ? false : 5000),
   });
   useEffect(() => {
     if (data?.last_finished && completed.current !== data.last_finished) {
@@ -62,7 +75,7 @@ export default function DiscoveryPanel({
         <div>
           <h2>{label}</h2>
           <p>
-            Technical internships and junior/graduate roles from{" "}
+            Software, product design and other early-career roles from{" "}
             {data.catalog.length} public company boards. Checks every{" "}
             {data.interval_hours} hours while CareerOS is running.
           </p>
@@ -87,6 +100,15 @@ export default function DiscoveryPanel({
         </p>
       )}
       {data.error && <p className="error-text">{data.error}</p>}
+      {data.summary.research &&
+        data.summary.research.status !== "NOT_CONFIGURED" && (
+          <p>
+            Web search: {data.summary.research.status.toLowerCase()} ·{" "}
+            {data.summary.research.leads ?? 0} leads ·{" "}
+            {data.summary.research.verified ?? 0} verified postings ·{" "}
+            {data.summary.research.errors} check errors. See Internship brief.
+          </p>
+        )}
       {!compact && (
         <>
           <p>
@@ -144,10 +166,11 @@ export default function DiscoveryPanel({
               ))}
             </ul>
             <p>
-              Coverage is limited to these boards and sources you add below.
-              This does not search every job site. Roles may be international;
-              location, graduation year and authorization still need checking.
-              Unknown requirements never become confirmed facts automatically.
+              These boards run without API keys. Connect broad web search in the
+              Internship brief to discover additional sources. Roles may be
+              international; location, graduation year and authorization still
+              need checking. Unknown requirements never become confirmed facts
+              automatically.
             </p>
             <p>
               Discovery generates in-app reminders, daily digests and weekly

@@ -228,3 +228,50 @@ async def deliver(db, user):
             n.delivery_error = f"{type(exc).__name__}; delivery will be retried"
         db.commit()
     return delivered
+
+
+def meaningful_updates(db, user):
+    """Only new/materially changed relevant postings produce research alerts."""
+    import hashlib
+    import json
+
+    from careeros.services.categories import CATEGORIES
+
+    prefs = profile_data(db, user)["preferences"]
+    created = 0
+    for job in ranked_jobs(db, user):
+        categories = set(job.get("categories", [])) & set(prefs.get("career_categories", []))
+        if not categories or job["is_demo"] or job["country"] not in prefs.get("countries", []):
+            continue
+        if job["match"]["eligibility"]["state"] in ("CLOSED", "NOT_ELIGIBLE"):
+            continue
+        material = {
+            key: job.get(key)
+            for key in (
+                "description",
+                "requirements",
+                "application_deadline",
+                "application_url",
+                "country",
+            )
+        }
+        digest = hashlib.sha256(
+            json.dumps(material, sort_keys=True, default=str).encode()
+        ).hexdigest()[:24]
+        title = f"Internship update: {job['company_name']}"[:240]
+        m = job["match"]
+        body = (
+            f"{job['title']} · {job['country']}\n"
+            f"Categories: {', '.join(CATEGORIES[c] for c in sorted(categories))}\n"
+            f"Eligibility: {m['eligibility']['state']}. {' '.join(m['eligibility']['reasons'])}\n"
+            f"Matching skills: {', '.join(m['strong_matches']) or 'Add your skills to assess fit'}.\n"
+            f"Prepare: {', '.join(m['missing_required'][:4]) or 'Review requirements and explain relevant project work'}.\n"
+            f"Deadline: {job['application_deadline'] or 'Not published'}\n"
+            f"{job['application_url'] or job['source_url']}\n"
+            "Newly discovered or materially updated; discovery time is not a posting date."
+        )
+        created += create_notification(
+            db, user.id, f"research:{job['id']}:{digest}", "research", title, body
+        )
+    db.commit()
+    return created

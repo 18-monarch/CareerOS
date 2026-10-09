@@ -18,6 +18,10 @@ class Settings(BaseSettings):
     ai_api_key: str = ""
     ai_model: str = ""
     auto_discovery_enabled: bool = True
+    auto_migrate_local: bool = True
+    brave_search_api_key: str = ""
+    research_query_limit: int = Field(default=4, ge=1, le=12)
+    research_result_limit: int = Field(default=12, ge=1, le=50)
     discovery_interval_hours: int = Field(default=6, ge=1, le=168)
 
     @model_validator(mode="after")

@@ -46,7 +46,10 @@ def match(profile, job, skills, projects, preferences, now=None):
         "skill_fit": (len(required & known) * 2 + len(preferred & known)) / denominator
         if denominator
         else 0.5,
-        "role_preference": 1.0 if job.get("normalized_role", "").casefold() in roles else 0,
+        "role_preference": 1.0
+        if job.get("normalized_role", "").casefold() in roles
+        or set(job.get("categories", [])) & set(preferences.get("career_categories", []))
+        else 0,
         "project_evidence": len(all_skills & evidence) / len(all_skills) if all_skills else 0,
         "graduation_fit": 1.0
         if any(

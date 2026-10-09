@@ -1,6 +1,8 @@
 import { notFound } from "next/navigation";
 import Workspace from "@/components/workspace";
 const sections = [
+  "research",
+  "application-desk",
   "opportunities",
   "applications",
   "learning",

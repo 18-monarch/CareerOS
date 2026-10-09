@@ -97,7 +97,7 @@ def profile_data(db, user):
         "name": user.name,
         "email": user.email,
         **{k: getattr(p, k) for k in fields},
-        "preferences": pref.data if pref else PreferenceIn().model_dump(),
+        "preferences": {**PreferenceIn().model_dump(), **(pref.data if pref else {})},
     }
 
 
@@ -115,6 +115,8 @@ def candidate_context(db, user):
 
 
 def serialize_job(job):
+    from careeros.services.categories import classify
+
     fields = [
         "id",
         "title",
@@ -146,6 +148,7 @@ def serialize_job(job):
         "required_skills": [s.skill.name for s in job.skills if s.required],
         "preferred_skills": [s.skill.name for s in job.skills if not s.required],
         **job.data,
+        "categories": classify(job.title),
     }
 
 
