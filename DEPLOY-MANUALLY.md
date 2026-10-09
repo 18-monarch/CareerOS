@@ -1,4 +1,6 @@
-# CareerOS: manual deployment guide
+# CareerOS: manual deployment with a paid Render cron
+
+**Want to avoid the paid cron? Follow [DEPLOY-FREE.md](DEPLOY-FREE.md) instead.** It uses a Free Render Web Service plus GitHub Actions for discovery. The guide below and `render.yaml` are the optional paid-cron route.
 
 Deploy the website on **Netlify**, the Python API and scheduled discovery on **Render**, and the database on **Neon**. This package is built and tested locally; it is not a live deployment. Use this guide from top to bottom. Advanced details are in `docs/DEPLOYMENT.md`.
 

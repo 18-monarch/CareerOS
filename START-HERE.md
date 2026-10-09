@@ -1,6 +1,6 @@
 # CareerOS — start here
 
-**Deploy online:** open [DEPLOY-MANUALLY.md](DEPLOY-MANUALLY.md) for the complete Netlify + Render + Neon walkthrough.
+**Deploy online without a paid cron:** open [DEPLOY-FREE.md](DEPLOY-FREE.md). The older [Blueprint walkthrough](DEPLOY-MANUALLY.md) includes a paid Render cron job.
 
 This October 9 update adds category-based internship research, product design, real PDF attachments, an application desk, a local Lever browser runner, and safer upgrades. Your existing career tracker, learning tools and accounts are retained.
 

@@ -57,7 +57,7 @@ jobs:
           cache: pip
           cache-dependency-path: requirements-dev.lock
       - run: pip install -r requirements-dev.lock && pip install --no-deps -e .
-      - run: ruff check apps/api apps/worker scripts/e2e_server.py scripts/check-deployment.py && ruff format --check apps/api apps/worker scripts/e2e_server.py scripts/check-deployment.py
+      - run: ruff check apps/api apps/worker scripts/e2e_server.py scripts/check-deployment.py scripts/run-hosted-discovery.py && ruff format --check apps/api apps/worker scripts/e2e_server.py scripts/check-deployment.py scripts/run-hosted-discovery.py
       - run: pytest -q
       - run: alembic upgrade head && alembic check
       - name: Seed and run workers on migrated PostgreSQL
