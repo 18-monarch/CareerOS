@@ -1,0 +1,6 @@
+terminal 1 from careeros folder :
+.\.venv\Scripts\python.exe -m uvicorn careeros.main:app --reload --host 127.0.0.1 --port 8000
+
+terminal 2 :
+cd apps/web
+npm.cmd run dev
