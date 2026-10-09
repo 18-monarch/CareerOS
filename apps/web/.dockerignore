@@ -4,6 +4,9 @@ node_modules
 .env*
 playwright-report
 test-results
+# Browser tests import the repository-level local application runner.
+# They run in CI from the full checkout, not in the frontend runtime image.
+tests/e2e
 
 **/.env*
 !**/.env.example
