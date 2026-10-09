@@ -1,107 +1,123 @@
-# Deploy CareerOS
+# Deploy CareerOS: Netlify + Render + Neon
 
-Target: Vercel frontend + Render FastAPI/cron + Neon PostgreSQL. Repository preparation and configuration are complete; no cloud deployment or billable resource was created during implementation.
+The repository is prepared for this stack. **It is not yet deployed.** There is no CareerOS Git remote in this checkout or accessible CareerOS repository in the connected GitHub installation. No cloud service or database was created in this preparation step. Netlify currently presents a sign-in screen in the available deployment browser.
 
-## 1. Push the repository
+## 1. Repository and cost
 
-Create a **private** GitHub repository, then from this checkout:
+Create an empty **private** GitHub repository named `CareerOS`, without a generated README, license or `.gitignore`. Push the included history from the `careeros` folder:
 
-```bash
+```powershell
 git remote add origin https://github.com/YOUR_ACCOUNT/CareerOS.git
 git push -u origin main
 ```
 
-Preserve the included Git history. Do not upload `.env`, databases, virtual environments or `node_modules`. The zip excludes these. Configure repository branch protection to require all four CI jobs after they have run once.
+If `origin` already exists, inspect `git remote -v` and use the correct existing remote rather than overwriting it. Keep all environment files, local databases and dependency folders out of Git. Wait for CI to pass before deploying. The Blueprint uses `checksPass` for subsequent automatic deployments.
 
-## 2. Neon
+The proposed Blueprint creates **one Free API service and one Starter cron service**. Render cron has a $1/month minimum per service and is billed by active running time; this is not a fixed total project price. Netlify, Neon, search and email have independent plan/usage limits. Review billing before applying. Upgrade the API to an always-on paid instance when cold starts are no longer acceptable. Free API inactivity does not stop the separate cron job.
 
-Create a PostgreSQL database and a least-privilege application role. Record the **direct**, TLS-enabled connection string, e.g. `postgresql+psycopg://USER:PASSWORD@DIRECT_HOST/DB?sslmode=require`. Avoid the `-pooler` hostname: session-scoped advisory locks require a stable physical session. Use a separate disposable database for CI.
+## 2. Neon database
 
-Keep database region close to Render (the Blueprint uses Singapore). Enable backups/restore according to your chosen plan and test restoring before storing valuable application history. Vercel never receives database credentials.
+Use a separate CareerOS project, preferably in Singapore to match Render. Do not repurpose another project's database. Choose PostgreSQL 17 (the native CI target) and retain your plan's backup/restore settings.
 
-## 3. Render backend
+Copy the **direct** connection URL with TLS, not the hostname containing `-pooler`:
 
-Apply `render.yaml` to the private repository or create its services manually. The Blueprint was checked against Render's official JSON schema; provisioning itself still requires your account. Review current service/cron pricing before applying it.
+```text
+postgresql+psycopg://USER:PASSWORD@DIRECT_HOST/DB?sslmode=require
+```
 
-Supply the `careeros-production` environment group values:
+This app uses session-scoped advisory locks and therefore deliberately requires direct connections for API and workers. Store it as `DATABASE_URL` in Render, never Netlify or client-side code. Existing local SQLite data is not uploaded automatically; keep your local database backup. Cloud onboarding starts with an empty account unless a separate reviewed data migration is performed.
 
-- `DATABASE_URL`: direct Neon URL with `sslmode=require`.
-- `FRONTEND_ORIGIN`: exact final Vercel/custom-domain HTTPS origin, no trailing slash.
-- `COOKIE_SECURE=true`, `ENVIRONMENT=production`.
-- `REGISTRATION_ENABLED=false` by default; use the operator CLI below to create your personal account.
+## 3. Reserve the frontend address
 
-Build: `pip install -r requirements.lock && pip install --no-deps .`
+In Netlify, import the private repository and choose a stable project name. Root `netlify.toml` specifies:
 
-Pre-deploy: `alembic upgrade head`
+| Setting | Value |
+|---|---|
+| Base directory | `apps/web` |
+| Build command | `node scripts/check-hosted-env.mjs && npm run build` |
+| Publish directory | `.next` |
+| Node version | `24` |
 
-Start: `uvicorn careeros.main:app --host 0.0.0.0 --port $PORT`
+Use Netlify's automatic Next.js adapter, not static ZIP drag-and-drop or `next export`. Record the actual assigned HTTPS address, such as `https://YOUR_NAME.netlify.app`. There is no guaranteed reserved name in this package. The first build intentionally fails until the two environment variables below are set.
 
-Health check: `/ready`. `/health` only proves that the process is alive; `/ready` also verifies migration state and database access.
+## 4. Render API and worker
 
-The included starter plan supports pre-deploy migrations. For a plan without pre-deploy support, run the migration manually through the service shell before starting the new version. Never launch multiple independent migration processes at once.
+Create a Blueprint from the CareerOS Git repository using root `render.yaml`. Confirm the two services and charges before Apply. Supply the shared group values:
 
-## 4. Vercel frontend
+| Variable | Value |
+|---|---|
+| `DATABASE_URL` | Direct Neon URL with TLS |
+| `FRONTEND_ORIGIN` | Exact Netlify/custom-domain HTTPS origin, no trailing slash |
 
-Import the same repository. Root Directory: `apps/web`. Framework: Next.js. Node: 24. Install: `npm ci`. Build: `npm run build`.
+The Blueprint supplies production mode, secure cookies, closed registration, Python 3.12.14, a six-hour discovery interval, `AUTO_DISCOVERY_ENABLED=false`, and `EXTERNAL_DISCOVERY_ENABLED=true`.
 
-Set server-side variables:
+Both services install locked Python requirements. Their explicit entry points are:
+
+```text
+API:  python -m careeros.deploy api
+Cron: python -m careeros.deploy cron
+```
+
+These entry points acquire a migration lock, upgrade using the active database connection and then start their workload. They work without Render's paid pre-deploy or shell features. Concurrent schema upgrades wait up to 45 seconds, then fail visibly rather than running overlapping migrations. Keep only reviewed, backwards-compatible migrations in automatic deployments; branch and test before destructive changes.
+
+The API binds `0.0.0.0:$PORT`; health check `/ready` requires schema `e91a05` and a working database. The worker runs at `15 * * * *` UTC, which is **:45 past every hour in India**. It expires old records and sessions, bootstraps starter boards, processes due discovery/research, prepares enabled drafts and generates/delivers alerts. Healthy users become due six hours after completion, so actual checks occur at the next hourly tick (roughly six to seven hours apart). A queued manual check waits for the next worker tick. Failed scans become due again after one hour. Notifications/digests are deduplicated; this setup does not promise a fixed 08:00 digest time.
+
+Do not enable the old ingestion/daily/weekly services alongside this Blueprint. For an already deployed older Blueprint, review Render's proposed removals rather than deleting unknown services. No existing unrelated services were changed here.
+
+## 5. Finish Netlify configuration
+
+Set these in Netlify's environment-variable UI, available to **builds and functions**:
 
 ```text
 API_BASE_URL=https://YOUR_RENDER_API.onrender.com
-FRONTEND_ORIGIN=https://YOUR_FRONTEND.vercel.app
+FRONTEND_ORIGIN=https://YOUR_NAME.netlify.app
 ```
 
-Set the exact same frontend origin on Render. Redeploy after changing environment variables. Do not prefix these with `NEXT_PUBLIC_`; the browser talks only to `/api` at its own origin. Cookies are set on that origin through the Next.js gateway and stay HttpOnly except for the random CSRF token.
+Use the API URL Render actually assigned. Redeploy Netlify after setting these. `FRONTEND_ORIGIN` must exactly match Render's value. Never prefix these with `NEXT_PUBLIC_`, and never put database/search/email keys in Netlify. The browser uses its same-origin `/api` gateway, preserving separate Secure cookies and CSRF protection.
 
-Preview domains are intentionally not wildcard-trusted. Use a separate staging backend/database and set that preview origin explicitly if you need preview testing.
+The build validates HTTPS origins and rejects missing settings. Netlify's deployment-context variables are build-only, so the Next.js configuration embeds only non-secret platform/context labels. The gateway disables account access on deploy previews and branch deploys. Use the production URL for private beta testing. A separate staging backend/database and reviewed configuration are required before enabling preview account access.
 
-## 5. Initialize your account
+Free Render services may take about a minute to wake. The Netlify gateway returns a controlled error after 25 seconds; wait and retry. Queued discovery runs independently on the cron service.
 
-Choose one path:
+## 6. Create your private account
 
-- Recommended: run `python -m careeros.manage create-user --email your@email.example --name "Your name"` in the backend shell. Enter a password at the hidden prompt. This creates an empty account while registration stays closed.
-- Alternatively enable registration briefly, create an account in the UI, then disable registration.
-- For a private demo only: run `DEMO_PASSWORD='unique-password' python -m careeros.seed --email your@email.example` in the backend shell. This adds eight synthetic postings and editable self-assessments. Never use the test password from CI for a hosted account.
+Registration stays disabled. In a terminal with the CareerOS Python environment, set `DATABASE_URL` to your direct Neon URL for this session, then run:
 
-For trusted-operator recovery, run `python -m careeros.manage reset-password --email your@email.example`. The CLI prompts securely, revokes sessions and writes an audit record. Users can also change their password in My profile with their current password.
+```powershell
+.\.venv\Scripts\python.exe -m careeros.manage create-user --email YOUR_EMAIL --name "Mohit"
+```
 
-No default admin password is installed. Users can manage only their own sources; there is no cross-user public admin dashboard.
+The password is entered twice at hidden prompts. This creates an empty account with no demo jobs. Do not put the password in a command, Git or chat. A paid Render shell can run the same command. Avoid leaving the production database URL in your normal local `.env`; restore your local configuration after the operation.
 
-## 6. Scheduled jobs
+Sign in through the Netlify URL. Complete your real education, work authorization, categories, skills, projects, portfolio and resume. The first worker run will connect starter sources automatically.
 
-All schedules in `render.yaml` use UTC:
+## 7. Search and email
 
-| Service | Schedule | India time | Commands |
-|---|---|---|---|
-| Ingestion | `15 */6 * * *` | 05:45, 11:45, 17:45, 23:45 IST | `run-cycle`: ingest, recalculate, expire, deadline alerts |
-| Daily | `30 2 * * *` | 08:00 IST | deadline alerts, digest |
-| Weekly | `30 2 * * 1` | Monday 08:00 IST | weekly summary |
+Add optional provider values to the **shared Render environment group**, so both API and cron receive them:
 
-Automatic discovery also runs inside the API by default. For a cron-only deployment, set `AUTO_DISCOVERY_ENABLED=false` and schedule `python -m worker discover-jobs` hourly; persisted due times enforce the six-hour user cadence. Do not confuse the separate cron services below with the API background thread. All cron services use the same environment group and direct database endpoint. Advisory locks skip duplicate runs. Alert unique keys make repeated invocations safe.
+- `BRAVE_SEARCH_API_KEY`: broad web research. Without it, ten public feeds and direct link inspection still work.
+- `RESEARCH_QUERY_LIMIT=4`, `RESEARCH_RESULT_LIMIT=12`: bounded per-user searches; provider usage depends on enabled users and retries/manual checks.
+- `RESEND_API_KEY`, `EMAIL_FROM`: verified email sender. Enable email in your profile and test actual delivery. No credentials means in-app notifications only.
 
-Connect actual source boards in the UI. Demo jobs are not a source of live opportunities. `refresh-jobs` is the same fetch/update pipeline as ingestion and is useful for a separately scheduled refresh cadence if desired.
+Redeploy affected services after changes. The application runner remains local and standard-Lever-only. Hosted discovery can prepare packets, but does not launch browser submissions. The runner must connect to the cloud account's database to see its approved queue; a local SQLite runner cannot see cloud approvals. A managed cloud application runner is a later deployment step.
 
-## 7. Optional providers
+## 8. Verify the live system
 
-Email: configure a verified sender, `RESEND_API_KEY` and `EMAIL_FROM` on the shared backend/cron group. Turn on email in the account profile. In-app notification creation remains independent of delivery. Failed deliveries stay visible and retry on later runs.
+From a Python environment with the project installed:
 
-AI: set `AI_API_KEY`, `AI_MODEL`, and an operator-controlled `AI_BASE_URL` compatible with chat completions. Only pasted job descriptions are sent for optional extraction. No resumes, passwords or full profiles are sent. Output is Pydantic-validated and marked unconfirmed; failures use local parsing.
+```text
+python scripts/check-deployment.py --url https://YOUR_NAME.netlify.app
+```
 
-Official feeds: set `ALLOWED_FEED_HOSTS` to trusted domains. This is a permission list, not a wildcard. Use documented public JSON rather than arbitrary web scraping.
+This read-only smoke check verifies page availability, readiness through the gateway, unauthenticated account protection, cross-origin mutation rejection and no-cache responses. It sends no applications and creates no records.
 
-## 8. Post-deployment smoke check
+Then manually verify login/logout, profile persistence after reload, PDF upload, category brief, one scheduled discovery run with real source counts, queue/pause/resume, notification deduplication, and a test email if configured. Confirm the Next.js adapter's deployed cookie handling on the actual host. Review Render logs and cron exit status. Native PostgreSQL CI and hosted end-to-end verification are required release gates; an embedded database test does not establish multi-session behavior.
 
-1. `/health` and `/ready` return 200, and `/ready` shows the expected Alembic head.
-2. Register/login from the final frontend URL; verify Secure/HttpOnly cookies and logout.
-3. Edit graduation/CGPA; import a source; inspect raw requirements and provenance.
-4. Save a role, mark Applied then OA Received, reload and verify the event history.
-5. Run deadline/digest cron manually twice; verify no duplicate records.
-6. Confirm a second user cannot read the first user's job/application URL.
-7. Check desktop/mobile navigation, error states and Render logs with request IDs.
-8. Send a test email if email is configured; verify sender/domain delivery rather than assuming API acceptance equals inbox placement.
+## References
 
-## Operations
-
-JSON logs contain request IDs, route, status, latency, source ID and error class. They omit bodies, credentials and tokens. Record run counts via source health. Monitor `/ready` externally. Keep logs/retention appropriate for a personal app.
-
-Rollback frontend/backend code via platform deployments only after checking database compatibility. Database migrations are a separate concern. Take a Neon backup/branch before destructive changes. The five migrations (current head `e91a05`) add tables, immutable-history triggers and source-reconciliation columns; review their explicit downgrade paths. `/ready` requires the exact head shipped with the API. Update that expected revision alongside future migrations.
+- https://docs.netlify.com/build/frameworks/framework-setup-guides/nextjs/overview/
+- https://docs.netlify.com/build/configure-builds/monorepos/
+- https://docs.netlify.com/build/functions/environment-variables/
+- https://render.com/docs/free
+- https://render.com/docs/cronjobs
+- https://render.com/schema/render.yaml.json

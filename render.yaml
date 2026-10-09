@@ -1,6 +1,6 @@
 # yaml-language-server: $schema=https://render.com/schema/render.yaml.json
-# Creates resources only when you explicitly apply the Blueprint in Render.
-# Neon database is supplied through the environment group, not provisioned here.
+# Review billing before Apply: API defaults to Free; cron has a $1/month minimum.
+# Neon is configured separately. Netlify hosts apps/web using netlify.toml.
 envVarGroups:
   - name: careeros-production
     envVars:
@@ -14,6 +14,16 @@ envVarGroups:
         value: production
       - key: REGISTRATION_ENABLED
         value: "false"
+      - key: AUTO_DISCOVERY_ENABLED
+        value: "false"
+      - key: AUTO_MIGRATE_LOCAL
+        value: "false"
+      - key: EXTERNAL_DISCOVERY_ENABLED
+        value: "true"
+      - key: DISCOVERY_INTERVAL_HOURS
+        value: "6"
+      - key: DISCOVERY_WORKER_INTERVAL_MINUTES
+        value: "60"
       - key: PYTHON_VERSION
         value: "3.12.14"
 services:
@@ -21,38 +31,21 @@ services:
     name: careeros-api
     runtime: python
     region: singapore
-    plan: starter
+    plan: free
     buildCommand: pip install -r requirements.lock && pip install --no-deps .
-    preDeployCommand: alembic upgrade head
-    startCommand: uvicorn careeros.main:app --host 0.0.0.0 --port $PORT
+    startCommand: python -m careeros.deploy api
     healthCheckPath: /ready
     autoDeployTrigger: checksPass
     envVars:
       - fromGroup: careeros-production
   - type: cron
-    name: careeros-ingestion
+    name: careeros-discovery
     runtime: python
     region: singapore
-    schedule: "15 */6 * * *"
+    plan: starter
+    schedule: "15 * * * *"
     buildCommand: pip install -r requirements.lock && pip install --no-deps .
-    startCommand: python -m worker run-cycle
-    envVars:
-      - fromGroup: careeros-production
-  - type: cron
-    name: careeros-daily
-    runtime: python
-    region: singapore
-    schedule: "30 2 * * *"
-    buildCommand: pip install -r requirements.lock && pip install --no-deps .
-    startCommand: python -m worker send-deadline-alerts && python -m worker send-daily-digest
-    envVars:
-      - fromGroup: careeros-production
-  - type: cron
-    name: careeros-weekly
-    runtime: python
-    region: singapore
-    schedule: "30 2 * * 1"
-    buildCommand: pip install -r requirements.lock && pip install --no-deps .
-    startCommand: python -m worker weekly-summary
+    startCommand: python -m careeros.deploy cron
+    autoDeployTrigger: checksPass
     envVars:
       - fromGroup: careeros-production

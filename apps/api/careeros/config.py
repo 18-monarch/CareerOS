@@ -18,6 +18,8 @@ class Settings(BaseSettings):
     ai_api_key: str = ""
     ai_model: str = ""
     auto_discovery_enabled: bool = True
+    external_discovery_enabled: bool = False
+    discovery_worker_interval_minutes: int = Field(default=60, ge=1, le=1440)
     auto_migrate_local: bool = True
     brave_search_api_key: str = ""
     research_query_limit: int = Field(default=4, ge=1, le=12)

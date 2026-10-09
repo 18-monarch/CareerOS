@@ -57,7 +57,7 @@ jobs:
           cache: pip
           cache-dependency-path: requirements-dev.lock
       - run: pip install -r requirements-dev.lock && pip install --no-deps -e .
-      - run: ruff check apps/api apps/worker scripts/e2e_server.py && ruff format --check apps/api apps/worker scripts/e2e_server.py
+      - run: ruff check apps/api apps/worker scripts/e2e_server.py scripts/check-deployment.py && ruff format --check apps/api apps/worker scripts/e2e_server.py scripts/check-deployment.py
       - run: pytest -q
       - run: alembic upgrade head && alembic check
       - name: Seed and run workers on migrated PostgreSQL
@@ -120,6 +120,13 @@ jobs:
           E2E_AUTODISCOVERY: "true"
           DEMO_PASSWORD: CareerOS-local-demo-2026
         run: scripts/verify-browser.sh discovery.spec.ts
+      - name: Verify hosted worker queue controls
+        env:
+          PYTHON_BIN: python
+          E2E_DATABASE_URL: postgresql+psycopg://careeros:test_only@localhost:5432/careeros_browser
+          E2E_EXTERNAL_DISCOVERY: "true"
+          DEMO_PASSWORD: CareerOS-local-demo-2026
+        run: scripts/verify-browser.sh hosted.spec.ts
       - uses: actions/upload-artifact@v4
         if: always()
         with:

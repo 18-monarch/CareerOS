@@ -8,6 +8,8 @@ import { ErrorBox, Feedback, useAction } from "./ui";
 type Discovery = {
   enabled: boolean;
   scheduler_enabled: boolean;
+  scheduler_mode: "local" | "external" | "disabled";
+  worker_interval_minutes: number;
   status: string;
   last_finished: string | null;
   next_run: string | null;
@@ -58,6 +60,7 @@ export default function DiscoveryPanel({
   if (error) return <ErrorBox error={error} />;
   if (!data) return <p className="muted">Checking automatic discovery…</p>;
   const running = data.status === "RUNNING";
+  const external = data.scheduler_mode === "external";
   const label = !data.enabled
     ? "Paused"
     : running
@@ -77,7 +80,10 @@ export default function DiscoveryPanel({
           <p>
             Software, product design and other early-career roles from{" "}
             {data.catalog.length} public company boards. Checks every{" "}
-            {data.interval_hours} hours while CareerOS is running.
+            {data.interval_hours} hours
+            {external
+              ? " using the hosted worker."
+              : " while CareerOS is running."}
           </p>
         </div>
         {compact && <Link href="/sources">Manage discovery</Link>}
@@ -91,12 +97,16 @@ export default function DiscoveryPanel({
       <p>
         {data.last_finished
           ? `Last check: ${when(data.last_finished)} · ${data.summary.added ?? 0} new · ${data.summary.live_opportunities ?? 0} live opportunities`
-          : "Starter sources are connected for you. Your first check should start within 30 seconds; it may take a few minutes."}
+          : external
+            ? `Your first check is queued for the hosted worker, scheduled every ${data.worker_interval_minutes} minutes. You can close this page.`
+            : "Starter sources are connected for you. Your first check should start within 30 seconds; it may take a few minutes."}
       </p>
       {data.enabled && data.next_run && (
         <p className="muted">
-          Next check: {when(data.next_run)}. Missed checks run when the backend
-          starts again.
+          Next eligible check: {when(data.next_run)}.{" "}
+          {external
+            ? "The hosted worker processes due checks on its next scheduled run."
+            : "Missed checks run when the backend starts again."}
         </p>
       )}
       {data.error && <p className="error-text">{data.error}</p>}
@@ -127,13 +137,18 @@ export default function DiscoveryPanel({
                 !data.scheduler_enabled
               }
               onClick={() =>
-                action.run(async () => {
-                  await send("/discovery/refresh", {});
-                  await client.invalidateQueries({ queryKey: ["discovery"] });
-                }, "Check queued. Results appear here automatically.")
+                action.run(
+                  async () => {
+                    await send("/discovery/refresh", {});
+                    await client.invalidateQueries({ queryKey: ["discovery"] });
+                  },
+                  external
+                    ? `Check queued for the next hosted worker run (within ${data.worker_interval_minutes} minutes when the worker is healthy).`
+                    : "Check queued. Results appear here automatically.",
+                )
               }
             >
-              Check now
+              {external ? "Queue a check" : "Check now"}
             </button>
             <button
               className="button"

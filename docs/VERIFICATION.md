@@ -1,5 +1,13 @@
 # Verification
 
+## October 9 — Netlify/Render deployment preparation
+
+87 backend tests and 8 frontend tests passed, including locked startup migration, external-worker queue status, preview isolation, origin protection and separate cookie forwarding. Lint/type checks, production build and an offline Netlify CLI build using the actual `netlify.toml` passed. The Blueprint validates against Render's current official JSON schema. Offline Netlify build does not prove deployed adapter behavior.
+
+The latest `e91a05` migration, downgrade/upgrade, seed, schema drift, JSON research query and immutable-history triggers passed on PostgreSQL 18.3 via PGlite. Native PostgreSQL installation was blocked by this environment's process permissions, so multi-session validation remains the configured GitHub CI gate. No Neon project or Render/Netlify deployment has been created. The local Git repository has no remote and no accessible CareerOS repository was found in the connected GitHub installation.
+
+The new browser journey checks that an external-worker installation allows queueing, preserves pause after reload and never claims that its API background thread is running. Production URL login, cron execution and actual email delivery remain post-deployment checks.
+
 ## October 9, 2026 — research and application release
 
 Executed: **85 backend tests**, **5 frontend component tests**, lint/format/type checks, production build and **7 Chromium scenarios** (six standard scenarios plus the separately enabled background discovery journey). Application adapter checks use controlled browser fixtures; no real employer application was sent.

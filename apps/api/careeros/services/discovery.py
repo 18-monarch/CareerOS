@@ -209,6 +209,7 @@ def wake_scheduler():
 
 
 def status_data(state):
+    settings = get_settings()
     return {
         **{
             key: getattr(state, key)
@@ -222,7 +223,11 @@ def status_data(state):
                 "error",
             )
         },
-        "scheduler_enabled": get_settings().auto_discovery_enabled,
-        "interval_hours": get_settings().discovery_interval_hours,
+        "scheduler_enabled": settings.auto_discovery_enabled or settings.external_discovery_enabled,
+        "scheduler_mode": "local"
+        if settings.auto_discovery_enabled
+        else ("external" if settings.external_discovery_enabled else "disabled"),
+        "worker_interval_minutes": settings.discovery_worker_interval_minutes,
+        "interval_hours": settings.discovery_interval_hours,
         "catalog": [{"company": b["company_name"], "url": b["url"]} for b in CATALOG],
     }

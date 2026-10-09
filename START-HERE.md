@@ -2,6 +2,8 @@
 
 This October 9 update adds category-based internship research, product design, real PDF attachments, an application desk, a local Lever browser runner, and safer upgrades. Your existing career tracker, learning tools and accounts are retained.
 
+For cloud hosting on **Netlify + Render + Neon**, follow [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md). The cloud configuration is prepared; creating the Git repository and deploying the services are still pending.
+
 ## Update your existing Windows installation
 
 1. Stop both CareerOS terminals and any application runner. Back up your existing `careeros` folder.

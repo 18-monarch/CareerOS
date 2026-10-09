@@ -1,0 +1,13 @@
+# The Python API and scheduled worker run on Render; no secrets belong here.
+[build]
+base = "apps/web"
+command = "node scripts/check-hosted-env.mjs && npm run build"
+publish = ".next"
+
+[build.environment]
+NODE_VERSION = "24"
+NEXT_TELEMETRY_DISABLED = "1"
+
+# Netlify automatically installs the current Next.js adapter.
+# Set API_BASE_URL and FRONTEND_ORIGIN in the Netlify UI for builds AND functions.
+# Account API access is disabled on preview hosts by the gateway.

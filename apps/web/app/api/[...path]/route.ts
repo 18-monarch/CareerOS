@@ -6,6 +6,20 @@ async function proxy(
   request: NextRequest,
   { params }: { params: Promise<{ path: string[] }> },
 ) {
+  // Preview hosts must not read or mutate the private production account.
+  if (
+    process.env.CAREEROS_HOST_PLATFORM === "netlify" &&
+    process.env.CAREEROS_DEPLOY_CONTEXT !== "production"
+  )
+    return NextResponse.json(
+      {
+        error: {
+          message:
+            "CareerOS account access is disabled on deploy previews. Open the production site.",
+        },
+      },
+      { status: 503 },
+    );
   const { path } = await params;
   if (path.some((p) => !/^[a-zA-Z0-9_-]+$/.test(p)))
     return NextResponse.json(
@@ -49,7 +63,9 @@ async function proxy(
         body,
         cache: "no-store",
         redirect: "manual",
-        signal: AbortSignal.timeout(90000),
+        signal: AbortSignal.timeout(
+          process.env.CAREEROS_HOST_PLATFORM === "netlify" ? 25000 : 90000,
+        ),
       },
     );
     const result = new NextResponse(upstream.body, { status: upstream.status });
@@ -66,7 +82,7 @@ async function proxy(
       {
         error: {
           message:
-            "CareerOS API is unavailable. Check the backend and try again.",
+            "CareerOS API is unavailable or waking up. Wait about a minute and try again. A queued discovery check will continue independently.",
         },
       },
       { status: 502 },
